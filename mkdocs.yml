@@ -1,0 +1,9 @@
+site_name: ChatBoard 文档
+site_url: https://ChatArch.github.io/ChatBoard
+repo_url: https://github.com/ChatArch/ChatBoard
+theme:
+  name: material
+  language: zh
+nav:
+  - 首页: index.md
+  - English: index.en.md
