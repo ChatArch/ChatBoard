@@ -9,7 +9,13 @@ description = "ChatBoard: ChatArch kanban board tooling package"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-dependencies = ["click>=8.0", "chatstyle>=0.1.0,<0.2.0", "chatenv>=0.2.0,<0.3.0"]
+dependencies = [
+    "click>=8.0",
+    "chatstyle>=0.1.0,<0.2.0",
+    "chatenv>=0.2.0,<0.3.0",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+]
 authors = [{name = "ChatArch", email = "1073853456@qq.com"}]
 keywords = ["chatboard", "chatarch", "cli"]
 classifiers = [
@@ -29,7 +35,7 @@ chatboard = "chatboard.cli:main"
 chatboard = "chatboard.config"
 
 [project.optional-dependencies]
-dev = ["build", "pytest", "twine"]
+dev = ["build", "httpx", "pytest", "twine"]
 docs = ["mkdocs>=1.4.0", "mkdocs-material>=9.0.0", "mike>=2.0.0"]
 
 [tool.setuptools.dynamic]
@@ -40,3 +46,6 @@ where = ["src"]
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.setuptools.package-data]
+chatboard = ["web_static/**/*"]
