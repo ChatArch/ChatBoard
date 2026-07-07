@@ -14,7 +14,7 @@ from chatboard import __version__
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
-from chatboard.services.cards import card_detail, ensure_card, find_card_path, move_card, update_card
+from chatboard.services.cards import card_detail, card_file_content, card_files, ensure_card, find_card_path, move_card, update_card
 from chatboard.services.workspace import catalog as build_catalog
 from chatboard.web.paths import package_static_dir
 
@@ -41,6 +41,27 @@ def get_card(card_id: str, root: str | None = None) -> dict[str, Any]:
     if project_path is None:
         raise HTTPException(404, f"card not found: {card_id}")
     return card_detail(project_path, root=_root(root))
+
+
+@app.get("/api/cards/{card_id}/files")
+def get_card_files(card_id: str, root: str | None = None) -> dict[str, Any]:
+    project_path = find_card_path(card_id, root=_root(root))
+    if project_path is None:
+        raise HTTPException(404, f"card not found: {card_id}")
+    return {"files": card_files(project_path)}
+
+
+@app.get("/api/cards/{card_id}/files/content")
+def get_card_file_content(card_id: str, path: str, root: str | None = None) -> dict[str, Any]:
+    project_path = find_card_path(card_id, root=_root(root))
+    if project_path is None:
+        raise HTTPException(404, f"card not found: {card_id}")
+    try:
+        return card_file_content(project_path, path)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"file not found: {path}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.post("/api/cards/ensure")
@@ -73,6 +94,35 @@ def move_card_api(card_id: str, payload: dict[str, Any] = Body(...), root: str |
         )
     except FileNotFoundError as exc:
         raise HTTPException(404, f"card not found: {card_id}") from exc
+    except (FileExistsError, ValueError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/discussions")
+def create_discussion(payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "title is required")
+    try:
+        return discussion_service.create_discussion(title=title, slug=payload.get("slug"), root=_root(root))
+    except FileExistsError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/discussions/{discussion_id}/items")
+def add_discussion_item(discussion_id: str, payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    card_id = str(payload.get("card_id") or "").strip()
+    if not card_id:
+        raise HTTPException(400, "card_id is required")
+    try:
+        return discussion_service.add_item(
+            discussion_id=discussion_id,
+            card_id=card_id,
+            root=_root(root),
+            dry_run=bool(payload.get("dry_run", False)),
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except (FileExistsError, ValueError) as exc:
         raise HTTPException(400, str(exc)) from exc
 

@@ -5,10 +5,12 @@ from __future__ import annotations
 import re
 import shutil
 from pathlib import Path
+from typing import Any
 
 from chatboard.models import (
     ArchiveState,
     CardLinks,
+    CardRef,
     CardTimestamps,
     DetailSection,
     DiscussionState,
@@ -18,8 +20,8 @@ from chatboard.models import (
     utc_now,
 )
 from chatboard.paths import area_path, as_workspace_relative, resolve_workspace_root
-from chatboard.storage.json_sidecar import load_card as load_sidecar
-from chatboard.storage.json_sidecar import save_card
+from chatboard.storage.markdown_card import load_card as load_markdown_card
+from chatboard.storage.markdown_card import save_card
 
 _URL_RE = re.compile(r'https?://[^\s)>"\']+')
 _HEADING_RE = re.compile(r"^#\s+(.+?)\s*$", re.M)
@@ -37,6 +39,15 @@ def _read_text(path: Path, limit: int | None = None) -> str:
     if limit is not None and len(text) > limit:
         return text[:limit] + "\n..."
     return text
+
+
+def _safe_child_path(root: Path, relative_path: str) -> Path:
+    candidate = (root / relative_path).resolve()
+    try:
+        candidate.relative_to(root.resolve())
+    except ValueError as exc:
+        raise ValueError("path escapes card root") from exc
+    return candidate
 
 
 def _title_from_project(project_path: Path) -> str:
@@ -59,8 +70,39 @@ def _summary_from_prd(project_path: Path) -> str:
 
 
 def _tags_from_relative(relative_path: str) -> list[str]:
-    parts = [part for part in Path(relative_path).parts[:-1] if part not in {"projects", "discussion", "archive"}]
+    parts = [part for part in Path(relative_path).parts[:-1] if part not in {"projects", "discussion", "archive", "Items"}]
     return parts[:6]
+
+
+def _looks_like_card_dir(path: Path) -> bool:
+    return any((path / name).exists() for name in ("PRD.md", "progress.md", "card.md"))
+
+
+def _card_ref_for_path(project_path: Path, root: Path) -> CardRef:
+    sidecar = load_markdown_card(project_path, root)
+    relative = as_workspace_relative(project_path, root)
+    area = _area_for_path(project_path, root)
+    stage = sidecar.stage if sidecar else infer_stage(project_path, area)
+    tags = sidecar.tags if sidecar else _tags_from_relative(relative)
+    return CardRef(
+        id=sidecar.id if sidecar else slugify_id(relative),
+        title=sidecar.title if sidecar else _title_from_project(project_path),
+        workspace_path=relative,
+        area=area,
+        stage=stage,
+        tags=tags,
+    )
+
+
+def _discussion_item_refs(project_path: Path, root: Path) -> list[CardRef]:
+    items_dir = project_path / "Items"
+    if not items_dir.exists() or not items_dir.is_dir():
+        return []
+    refs: list[CardRef] = []
+    for item in sorted(items_dir.iterdir()):
+        if item.is_dir() and _looks_like_card_dir(item):
+            refs.append(_card_ref_for_path(item.resolve(), root))
+    return refs
 
 
 def _area_for_path(project_path: Path, root: Path) -> str:
@@ -71,7 +113,7 @@ def _area_for_path(project_path: Path, root: Path) -> str:
     if not parts:
         return "projects"
     first = parts[0]
-    if first in {"projects", "discussion", "archive"}:
+    if first in {"projects", "discussion", "archive", "discard"}:
         return first
     if first == ".trash":
         return "trash"
@@ -79,11 +121,13 @@ def _area_for_path(project_path: Path, root: Path) -> str:
 
 
 def infer_stage(project_path: Path, area: str) -> str:
-    card = load_sidecar(project_path)
+    card = load_markdown_card(project_path)
     if card:
         return card.stage
     if area == "archive":
         return "archived"
+    if area == "discard":
+        return "discarded"
     if area == "discussion":
         return "review"
     if not (project_path / "PRD.md").exists():
@@ -121,23 +165,30 @@ def infer_card(project_path: str | Path, root: str | Path | None = None) -> Proj
         discussion=DiscussionState(status="not_started" if area == "projects" else "review"),
         archive=ArchiveState(ready=stage == "archive_ready"),
         timestamps=CardTimestamps(),
+        nested_items=_discussion_item_refs(path, root_path) if area == "discussion" else [],
     )
 
 
 def load_card(project_path: str | Path, root: str | Path | None = None) -> ProjectCard:
     path = Path(project_path).expanduser().resolve()
-    card = load_sidecar(path)
+    root_path = resolve_workspace_root(root)
+    card = load_markdown_card(path, root_path)
     if card is None:
-        return infer_card(path, root)
+        return infer_card(path, root_path)
+    if _area_for_path(path, root_path) == "discussion":
+        card.nested_items = _discussion_item_refs(path, root_path)
     return card
 
 
 def ensure_card(project_path: str | Path, root: str | Path | None = None) -> ProjectCard:
     path = Path(project_path).expanduser().resolve()
-    card = load_sidecar(path)
+    root_path = resolve_workspace_root(root)
+    card = load_markdown_card(path, root_path)
     if card is None:
-        card = infer_card(path, root)
+        card = infer_card(path, root_path)
         save_card(path, card)
+    if _area_for_path(path, root_path) == "discussion":
+        card.nested_items = _discussion_item_refs(path, root_path)
     return card
 
 
@@ -149,7 +200,7 @@ def save_existing_card(project_path: str | Path, card: ProjectCard) -> ProjectCa
 def find_card_path(card_id: str, root: str | Path | None = None) -> Path | None:
     from chatboard.services.workspace import iter_project_dirs
 
-    for project in iter_project_dirs(root):
+    for project in iter_project_dirs(root, include_nested=True):
         card = load_card(project, root)
         if card.id == card_id:
             return project
@@ -170,6 +221,7 @@ def card_detail(project_path: str | Path, root: str | Path | None = None) -> dic
                 reports.append({"path": item.relative_to(path).as_posix(), "size": item.stat().st_size})
     sections = [
         DetailSection("overview", "Overview", "fields", card.to_dict()),
+        DetailSection("files", "Files", "file_tree", card_files(path)),
         DetailSection("prd", "PRD", "markdown", prd),
         DetailSection("progress", "Progress", "markdown", progress_tail),
         DetailSection("discussion", "Discussion", "json", card.discussion.__dict__),
@@ -177,6 +229,54 @@ def card_detail(project_path: str | Path, root: str | Path | None = None) -> dic
         DetailSection("archive", "Archive", "json", card.archive.__dict__),
     ]
     return {"card": card.to_dict(), "sections": [section.__dict__ for section in sections]}
+
+
+def card_files(project_path: str | Path, max_depth: int = 3) -> list[dict[str, Any]]:
+    root = Path(project_path).expanduser().resolve()
+    ignored = {".git", ".venv", "__pycache__", "node_modules"}
+    ignored_files = {"card.json"}
+
+    def walk(path: Path, depth: int) -> list[dict[str, Any]]:
+        if depth > max_depth or not path.is_dir():
+            return []
+        nodes = []
+        for item in sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+            if item.name in ignored or (item.is_file() and item.name in ignored_files):
+                continue
+            relative = item.relative_to(root).as_posix()
+            node = {
+                "name": item.name,
+                "path": relative,
+                "type": "directory" if item.is_dir() else "file",
+            }
+            if item.is_file():
+                node["size"] = item.stat().st_size
+                node["previewable"] = item.suffix.lower() in {".md", ".txt", ".json", ".yaml", ".yml", ".py", ".js", ".css", ".html"}
+            else:
+                node["children"] = walk(item, depth + 1)
+            nodes.append(node)
+        return nodes
+
+    return walk(root, 1)
+
+
+def card_file_content(project_path: str | Path, relative_path: str, limit: int = 50000) -> dict[str, Any]:
+    root = Path(project_path).expanduser().resolve()
+    target = _safe_child_path(root, relative_path)
+    if not target.exists() or not target.is_file():
+        raise FileNotFoundError(relative_path)
+    if target.stat().st_size > limit:
+        content = _read_text(target, limit)
+        truncated = True
+    else:
+        content = _read_text(target)
+        truncated = False
+    return {
+        "path": target.relative_to(root).as_posix(),
+        "size": target.stat().st_size,
+        "content": content,
+        "truncated": truncated,
+    }
 
 
 def update_card(card_id: str, patch: dict, root: str | Path | None = None) -> ProjectCard:
@@ -218,7 +318,12 @@ def move_card(
         stage = stage or "trashed"
     else:
         destination = area_path(root_path, area) / Path(*old_relative.parts[1:])
-        stage = stage or ("review" if area == "discussion" else "development")
+        if area == "discussion":
+            stage = stage or "review"
+        elif area == "discard":
+            stage = stage or "discarded"
+        else:
+            stage = stage or "development"
     if destination.exists():
         raise FileExistsError(destination)
     result = {

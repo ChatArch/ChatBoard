@@ -28,7 +28,7 @@ def main() -> None:
 
 @main.command()
 @click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
-@click.option("--ensure", is_flag=True, help="Create missing card.json files.")
+@click.option("--ensure", is_flag=True, help="Create missing card.md files.")
 def scan(root: Path | None, ensure: bool) -> None:
     """Scan workspace project areas and list cards."""
 
@@ -37,7 +37,7 @@ def scan(root: Path | None, ensure: bool) -> None:
 
 @main.command()
 @click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
-@click.option("--ensure", is_flag=True, help="Create missing card.json files.")
+@click.option("--ensure", is_flag=True, help="Create missing card.md files.")
 def catalog(root: Path | None, ensure: bool) -> None:
     """Print board catalog grouped by columns."""
 
@@ -53,7 +53,7 @@ def card() -> None:
 @click.argument("project_path", type=click.Path(path_type=Path))
 @click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
 def card_ensure(project_path: Path, root: Path | None) -> None:
-    """Create card.json for a project if missing."""
+    """Create card.md for a project if missing."""
 
     _json(ensure_card(project_path, root=root).to_dict())
 
@@ -72,7 +72,7 @@ def card_show(card_id: str, root: Path | None) -> None:
 
 @card.command("move")
 @click.argument("card_id")
-@click.argument("area", type=click.Choice(["projects", "discussion", "archive", "trash"]))
+@click.argument("area", type=click.Choice(["projects", "discussion", "archive", "discard", "trash"]))
 @click.option("--stage", default=None, help="Optional target stage.")
 @click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
 @click.option("--dry-run", is_flag=True, help="Show destination without moving files.")
@@ -88,6 +88,33 @@ def card_move(card_id: str, area: str, stage: str | None, root: Path | None, dry
 @main.group()
 def discussion() -> None:
     """Discussion workflow operations."""
+
+
+@discussion.command("create")
+@click.argument("title")
+@click.option("--slug", default=None, help="Optional MM-DD-prefixed directory name.")
+@click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
+def discussion_create(title: str, slug: str | None, root: Path | None) -> None:
+    """Create a project-like discussion topic."""
+
+    try:
+        _json(discussion_service.create_discussion(title=title, slug=slug, root=root))
+    except FileExistsError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@discussion.command("add-item")
+@click.argument("discussion_id")
+@click.argument("card_id")
+@click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
+@click.option("--dry-run", is_flag=True, help="Show destination without moving files.")
+def discussion_add_item(discussion_id: str, card_id: str, root: Path | None, dry_run: bool) -> None:
+    """Move a project card into a discussion's Items directory."""
+
+    try:
+        _json(discussion_service.add_item(discussion_id=discussion_id, card_id=card_id, root=root, dry_run=dry_run))
+    except (FileNotFoundError, FileExistsError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @discussion.command("open")
@@ -139,7 +166,7 @@ def archive_run(card_id: str, root: Path | None, dry_run: bool) -> None:
 @click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
 @click.option("--dry-run", is_flag=True, help="Show destination without moving files.")
 def discard(card_id: str, reason: str, root: Path | None, dry_run: bool) -> None:
-    """Discard a card and move it to archive as discarded."""
+    """Soft-delete a card into the discard area."""
 
     _json(archive_service.discard(card_id, reason=reason, root=root, dry_run=dry_run))
 

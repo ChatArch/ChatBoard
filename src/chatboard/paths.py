@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-DEFAULT_AREAS = ("projects", "discussion", "archive")
+DEFAULT_AREAS = ("projects", "discussion", "archive", "discard")
 IGNORED_DIR_NAMES = {
     ".git",
     ".hg",

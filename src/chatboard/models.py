@@ -6,10 +6,10 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-Area = Literal["projects", "discussion", "archive", "trash"]
+Area = Literal["projects", "discussion", "archive", "discard", "trash"]
 
 CARD_SCHEMA_VERSION = "chatboard.project_card.v1"
-VALID_AREAS = {"projects", "discussion", "archive", "trash"}
+VALID_AREAS = {"projects", "discussion", "archive", "discard", "trash"}
 VALID_STAGES = {
     "scaffold",
     "prd",
@@ -74,6 +74,16 @@ class CardTimestamps:
 
 
 @dataclass
+class CardRef:
+    id: str
+    title: str
+    workspace_path: str
+    area: str
+    stage: str
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass
 class ProjectCard:
     id: str
     title: str
@@ -92,6 +102,7 @@ class ProjectCard:
     archive: ArchiveState = field(default_factory=ArchiveState)
     dependencies: CardDependencies = field(default_factory=CardDependencies)
     timestamps: CardTimestamps = field(default_factory=CardTimestamps)
+    nested_items: list[CardRef] = field(default_factory=list)
 
     @property
     def column(self) -> str:
@@ -147,9 +158,9 @@ DEFAULT_COLUMNS: list[tuple[str, str]] = [
 def column_for(area: str, stage: str) -> str:
     if area == "trash" or stage == "trashed":
         return "trash"
+    if area == "discard" or stage == "discarded":
+        return "discard"
     if area == "archive":
-        if stage == "discarded":
-            return "discard"
         return "archive"
     if area == "discussion":
         return "discussion"

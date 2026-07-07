@@ -22,9 +22,16 @@ function cardHtml(card) {
     (links.reports || []).length ? `<span class="badge asset">Reports ${(links.reports || []).length}</span>` : '',
     (links.feishu || []).length ? `<span class="badge asset">Feishu ${(links.feishu || []).length}</span>` : '',
   ].join('');
+  const nested = card.nested_items || [];
+  const nestedItems = nested.length ? `<div class="nested-items">
+    <div class="nested-label">Items ${esc(nested.length)}</div>
+    ${nested.slice(0, 6).map((item) => `<button class="nested-item" type="button" data-nested-card-id="${esc(item.id)}">${esc(item.title)}</button>`).join('')}
+    ${nested.length > 6 ? `<div class="nested-more">+${esc(nested.length - 6)} more</div>` : ''}
+  </div>` : '';
   return `<article class="card${active}" data-card-id="${esc(card.id)}">
     <div class="card-title">${esc(card.title)}</div>
     ${card.summary ? `<div class="card-summary">${esc(card.summary)}</div>` : ''}
+    ${nestedItems}
     <div class="card-meta">
       <span class="badge area">${esc(card.area)}</span>
       <span class="badge stage">${esc(card.stage)}</span>
@@ -52,6 +59,36 @@ function renderSummary(data) {
   `;
 }
 
+function archiveColumnCardsHtml(cards = []) {
+  if (!cards.length) return '<div class="empty-column-note">No cards yet</div>';
+  const groups = {};
+  cards.forEach((card) => {
+    const match = String(card.workspace_path || '').match(/archive\/(\d{4}-\d{2}-\d{2})\//);
+    const day = match ? match[1] : 'undated';
+    const month = day === 'undated' ? 'undated' : day.slice(0, 7);
+    groups[month] = groups[month] || {};
+    groups[month][day] = groups[month][day] || [];
+    groups[month][day].push(card);
+  });
+  return Object.keys(groups).sort().reverse().map((month, monthIndex) => `
+    <details class="archive-month" ${monthIndex === 0 ? 'open' : ''}>
+      <summary>${esc(month)}</summary>
+      ${Object.keys(groups[month]).sort().reverse().map((day, dayIndex) => `
+        <details class="archive-day" ${monthIndex === 0 && dayIndex === 0 ? 'open' : ''}>
+          <summary>${esc(day)} <span>${groups[month][day].length}</span></summary>
+          <div class="card-list">${groups[month][day].map(cardHtml).join('')}</div>
+        </details>
+      `).join('')}
+    </details>
+  `).join('');
+}
+
+function columnCardsHtml(column) {
+  const cards = column.cards || [];
+  if (column.key === 'archive') return archiveColumnCardsHtml(cards);
+  return `<div class="card-list">${cards.map(cardHtml).join('') || '<div class="empty-column-note">No cards yet</div>'}</div>`;
+}
+
 function renderCatalog(data) {
   state.catalog = data;
   const columns = data.columns || [];
@@ -63,12 +100,29 @@ function renderCatalog(data) {
   $('board').innerHTML = columns.map((column) => `
     <section class="column" data-column="${esc(column.key)}">
       <div class="column-head"><span class="column-title">${esc(column.title)}</span><span class="count">${(column.cards || []).length}</span></div>
-      <div class="card-list">${(column.cards || []).map(cardHtml).join('') || '<div class="empty-column-note">No cards yet</div>'}</div>
+      ${columnCardsHtml(column)}
     </section>
   `).join('');
   document.querySelectorAll('.card').forEach((node) => {
     node.addEventListener('click', () => loadDetail(node.dataset.cardId));
   });
+  document.querySelectorAll('.nested-item').forEach((node) => {
+    node.addEventListener('click', (event) => {
+      event.stopPropagation();
+      loadDetail(node.dataset.nestedCardId);
+    });
+  });
+}
+
+function fileTreeHtml(nodes = []) {
+  if (!nodes.length) return '<div class="card-summary">No files</div>';
+  return `<ul class="file-tree">${nodes.map((node) => {
+    if (node.type === 'directory') {
+      return `<li><span class="file-dir">${esc(node.name)}/</span>${fileTreeHtml(node.children || [])}</li>`;
+    }
+    const action = node.previewable ? `data-file-path="${esc(node.path)}"` : '';
+    return `<li><button class="file-node" type="button" ${action}>${esc(node.name)}</button><span class="file-size">${esc(node.size || 0)}b</span></li>`;
+  }).join('')}</ul>`;
 }
 
 function sectionHtml(section) {
@@ -76,6 +130,8 @@ function sectionHtml(section) {
   const keyClass = esc(section.key || 'section');
   if (section.kind === 'markdown') {
     body = section.data ? `<pre>${esc(section.data)}</pre>` : '<div class="card-summary">Empty</div>';
+  } else if (section.kind === 'file_tree') {
+    body = `<div class="files-layout"><div>${fileTreeHtml(section.data || [])}</div><pre id="filePreview" class="file-preview">Select a text file to preview.</pre></div>`;
   } else if (section.kind === 'fields') {
     const card = section.data || {};
     body = `<div class="kv">
@@ -84,14 +140,39 @@ function sectionHtml(section) {
       <div>Stage</div><div>${esc(card.stage)}</div>
       <div>Priority</div><div>${esc(card.priority)}</div>
       <div>Assignee</div><div>${esc(card.assignee || '—')}</div>
-      <div>Updated</div><div>${esc(card.timestamps && card.timestamps.updated_at || '—')}</div>
+      <div>Path</div><div>${esc(card.workspace_path || '—')}</div>
     </div>`;
   } else if (Array.isArray(section.data)) {
     body = section.data.length ? `<pre>${esc(JSON.stringify(section.data, null, 2))}</pre>` : '<div class="card-summary">Empty</div>';
   } else {
     body = `<pre>${esc(JSON.stringify(section.data || {}, null, 2))}</pre>`;
   }
-  return `<section class="section ${keyClass} ${section.kind === 'markdown' ? 'markdown' : ''}"><h3>${esc(section.title)}</h3>${body}</section>`;
+  return `<section class="section tab-panel ${keyClass} ${section.kind === 'markdown' ? 'markdown' : ''}" data-tab-panel="${esc(section.key)}">${body}</section>`;
+}
+
+function renderDetail(detail) {
+  const sections = detail.sections || [];
+  const active = sections[0] && sections[0].key;
+  $('detailBody').innerHTML = `
+    <div class="detail-tabs">${sections.map((section, index) => `<button class="tab-button ${index === 0 ? 'active' : ''}" type="button" data-tab="${esc(section.key)}">${esc(section.title)}</button>`).join('')}</div>
+    <div class="tab-panels">${sections.map(sectionHtml).join('')}</div>
+  `;
+  document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === active));
+  document.querySelectorAll('.tab-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.tab-button').forEach((item) => item.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === button.dataset.tab));
+      button.classList.add('active');
+    });
+  });
+  document.querySelectorAll('.file-node[data-file-path]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const preview = $('filePreview');
+      preview.textContent = 'Loading...';
+      const content = await api(`/api/cards/${encodeURIComponent(detail.card.id)}/files/content?path=${encodeURIComponent(button.dataset.filePath)}`);
+      preview.textContent = content.content || '';
+    });
+  });
 }
 
 function openModal() {
@@ -125,7 +206,7 @@ async function loadDetail(cardId) {
   const card = detail.card;
   $('detailTitle').textContent = card.title;
   $('detailPath').textContent = card.workspace_path;
-  $('detailBody').innerHTML = (detail.sections || []).map(sectionHtml).join('');
+  renderDetail(detail);
 }
 
 async function refresh() {

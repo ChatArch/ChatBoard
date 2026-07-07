@@ -13,10 +13,22 @@ from chatboard.services.cards import ensure_card, load_card
 def _looks_like_project_dir(path: Path) -> bool:
     if not path.is_dir() or is_ignored_dir(path):
         return False
-    return any((path / name).exists() for name in ("PRD.md", "progress.md", "card.json"))
+    return any((path / name).exists() for name in ("PRD.md", "progress.md", "card.md"))
 
 
-def iter_project_dirs(root: str | Path | None = None, areas: Iterable[str] = DEFAULT_AREAS) -> list[Path]:
+def _is_discussion_item_dir(path: Path, root: Path) -> bool:
+    try:
+        parts = path.resolve().relative_to(root).parts
+    except ValueError:
+        return False
+    return len(parts) >= 4 and parts[0] == "discussion" and "Items" in parts[1:]
+
+
+def iter_project_dirs(
+    root: str | Path | None = None,
+    areas: Iterable[str] = DEFAULT_AREAS,
+    include_nested: bool = False,
+) -> list[Path]:
     root_path = resolve_workspace_root(root)
     found: list[Path] = []
     seen: set[Path] = set()
@@ -28,6 +40,8 @@ def iter_project_dirs(root: str | Path | None = None, areas: Iterable[str] = DEF
             if not path.is_dir() or is_ignored_dir(path):
                 continue
             if any(part in {".git", "node_modules", ".venv", "__pycache__", "playground"} for part in path.parts):
+                continue
+            if not include_nested and _is_discussion_item_dir(path, root_path):
                 continue
             if _looks_like_project_dir(path):
                 resolved = path.resolve()

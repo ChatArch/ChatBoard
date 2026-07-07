@@ -34,6 +34,18 @@ def test_catalog_and_detail_endpoints(tmp_path):
 
     assert detail.status_code == 200
     assert detail.json()["card"]["title"] == "Demo API"
+    assert {section["key"] for section in detail.json()["sections"]} >= {"overview", "files", "prd", "progress"}
+
+    files = client.get("/api/cards/projects-chatarch-07-07-demo/files", params={"root": str(tmp_path)})
+    assert files.status_code == 200
+    assert any(item["path"] == "PRD.md" for item in files.json()["files"])
+
+    content = client.get(
+        "/api/cards/projects-chatarch-07-07-demo/files/content",
+        params={"root": str(tmp_path), "path": "PRD.md"},
+    )
+    assert content.status_code == 200
+    assert "# Demo API" in content.json()["content"]
 
 
 def test_index_serves_static_page():
