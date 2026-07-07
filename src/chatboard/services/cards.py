@@ -19,7 +19,7 @@ from chatboard.models import (
     VALID_STAGES,
     utc_now,
 )
-from chatboard.paths import area_path, as_workspace_relative, resolve_workspace_root
+from chatboard.paths import DEFAULT_GITIGNORE_DIR_NAMES, DEFAULT_GITIGNORE_FILE_NAMES, area_path, as_workspace_relative, resolve_workspace_root
 from chatboard.storage.markdown_card import load_card as load_markdown_card
 from chatboard.storage.markdown_card import save_card
 
@@ -231,27 +231,42 @@ def card_detail(project_path: str | Path, root: str | Path | None = None) -> dic
     return {"card": card.to_dict(), "sections": [section.__dict__ for section in sections]}
 
 
-def card_files(project_path: str | Path, max_depth: int = 3) -> list[dict[str, Any]]:
-    root = Path(project_path).expanduser().resolve()
-    ignored = {".git", ".venv", "__pycache__", "node_modules"}
-    ignored_files = {"card.json"}
+FILE_EXPLORER_IGNORED_DIR_NAMES = DEFAULT_GITIGNORE_DIR_NAMES | {".trash"}
+FILE_EXPLORER_IGNORED_FILE_NAMES = DEFAULT_GITIGNORE_FILE_NAMES | {"card.json"}
+TASK_FOCUSED_ROOT_NAMES = {"card.md", "PRD.md", "progress.md", "reports", "scripts", "playground", "assets", "Items"}
+PREVIEWABLE_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml", ".py", ".js", ".css", ".html"}
 
+
+def _is_file_explorer_ignored(item: Path) -> bool:
+    return item.name in FILE_EXPLORER_IGNORED_DIR_NAMES or (item.is_file() and item.name in FILE_EXPLORER_IGNORED_FILE_NAMES)
+
+
+def _hide_from_file_explorer(item: Path, root: Path, include_hidden: bool) -> bool:
+    if _is_file_explorer_ignored(item):
+        return True
+    if include_hidden:
+        return False
+    return item.parent == root and item.name not in TASK_FOCUSED_ROOT_NAMES
+
+
+def card_files(project_path: str | Path, max_depth: int = 3, include_hidden: bool = False) -> list[dict[str, Any]]:
+    root = Path(project_path).expanduser().resolve()
     def walk(path: Path, depth: int) -> list[dict[str, Any]]:
         if depth > max_depth or not path.is_dir():
             return []
         nodes = []
         for item in sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
-            if item.name in ignored or (item.is_file() and item.name in ignored_files):
+            if _hide_from_file_explorer(item, root, include_hidden):
                 continue
             relative = item.relative_to(root).as_posix()
-            node = {
+            node: dict[str, Any] = {
                 "name": item.name,
                 "path": relative,
                 "type": "directory" if item.is_dir() else "file",
             }
             if item.is_file():
                 node["size"] = item.stat().st_size
-                node["previewable"] = item.suffix.lower() in {".md", ".txt", ".json", ".yaml", ".yml", ".py", ".js", ".css", ".html"}
+                node["previewable"] = item.suffix.lower() in PREVIEWABLE_SUFFIXES
             else:
                 node["children"] = walk(item, depth + 1)
             nodes.append(node)
@@ -277,6 +292,36 @@ def card_file_content(project_path: str | Path, relative_path: str, limit: int =
         "content": content,
         "truncated": truncated,
     }
+
+
+def card_file_list(project_path: str | Path, relative_path: str = "", include_hidden: bool = False) -> dict[str, Any]:
+    root = Path(project_path).expanduser().resolve()
+    target = _safe_child_path(root, relative_path) if relative_path else root
+    if not target.exists() or not target.is_dir():
+        raise FileNotFoundError(relative_path)
+    children = []
+    for item in sorted(target.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+        if _hide_from_file_explorer(item, root, include_hidden):
+            continue
+        relative = item.relative_to(root).as_posix()
+        node: dict[str, Any] = {
+            "name": item.name,
+            "path": relative,
+            "type": "directory" if item.is_dir() else "file",
+        }
+        if item.is_dir():
+            try:
+                node["has_children"] = any(
+                    not _hide_from_file_explorer(child, root, include_hidden)
+                    for child in item.iterdir()
+                )
+            except PermissionError:
+                node["has_children"] = False
+        else:
+            node["size"] = item.stat().st_size
+            node["previewable"] = item.suffix.lower() in PREVIEWABLE_SUFFIXES
+        children.append(node)
+    return {"path": target.relative_to(root).as_posix() if target != root else "", "children": children}
 
 
 def update_card(card_id: str, patch: dict, root: str | Path | None = None) -> ProjectCard:

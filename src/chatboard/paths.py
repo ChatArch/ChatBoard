@@ -5,15 +5,24 @@ from __future__ import annotations
 from pathlib import Path
 
 DEFAULT_AREAS = ("projects", "discussion", "archive", "discard")
-IGNORED_DIR_NAMES = {
+DEFAULT_GITIGNORE_DIR_NAMES = {
     ".git",
     ".hg",
     ".svn",
     ".venv",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
     "__pycache__",
+    "build",
+    "dist",
     "node_modules",
     "site",
-    "dist",
+}
+DEFAULT_GITIGNORE_FILE_NAMES = {
+    ".DS_Store",
+}
+WORKSPACE_SCAN_IGNORED_DIR_NAMES = DEFAULT_GITIGNORE_DIR_NAMES | {
     "playground",
     ".trash",
 }
@@ -41,4 +50,4 @@ def area_path(root: str | Path | None, area: str) -> Path:
 
 
 def is_ignored_dir(path: Path) -> bool:
-    return path.name in IGNORED_DIR_NAMES or path.name.startswith(".") and path.name != "."
+    return path.name in WORKSPACE_SCAN_IGNORED_DIR_NAMES or path.name.startswith(".") and path.name != "."
