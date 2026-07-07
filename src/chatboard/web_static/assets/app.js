@@ -1,4 +1,11 @@
-const state = { catalog: null, selected: null, fullscreen: false };
+const COLUMN_DEFS = [
+  { key: 'project', title: 'Project' },
+  { key: 'discussion', title: 'Discussion' },
+  { key: 'archive', title: 'Archive' },
+  { key: 'discard', title: 'Discard' },
+];
+const PAGE_SIZE = 24;
+const state = { catalog: null, selected: null, fullscreen: false, fileExplorerShowAll: false };
 
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -10,6 +17,34 @@ async function api(path, options = {}) {
   });
   if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
   return response.json();
+}
+
+function emptyCatalog() {
+  return {
+    root: '',
+    columns: COLUMN_DEFS.map((column) => ({
+      ...column,
+      cards: [],
+      loading: false,
+      loaded: false,
+      error: null,
+      has_more: false,
+      next_offset: 0,
+    })),
+  };
+}
+
+function columnState(key) {
+  return state.catalog.columns.find((column) => column.key === key);
+}
+
+function updateColumn(key, patch) {
+  const column = columnState(key);
+  Object.assign(column, patch);
+}
+
+function loadedCardCount() {
+  return (state.catalog?.columns || []).reduce((total, column) => total + (column.cards || []).length, 0);
 }
 
 function cardHtml(card) {
@@ -41,26 +76,24 @@ function cardHtml(card) {
   </article>`;
 }
 
-function renderSummary(data) {
-  const summary = data.summary || {};
-  const areas = summary.areas || {};
-  const tags = summary.top_tags || [];
+function renderSummary() {
+  const columns = state.catalog?.columns || [];
+  const loaded = loadedCardCount();
+  const loading = columns.some((column) => column.loading);
+  const complete = columns.every((column) => column.loaded && !column.has_more);
   $('summary').innerHTML = `
     <div class="stats-grid">
-      <div class="stat-card"><span>Total</span><strong>${esc(data.total_cards)}</strong></div>
-      <div class="stat-card"><span>Project</span><strong>${esc(areas.projects || 0)}</strong></div>
-      <div class="stat-card"><span>Discussion</span><strong>${esc(areas.discussion || 0)}</strong></div>
-      <div class="stat-card"><span>Archive</span><strong>${esc(areas.archive || 0)}</strong></div>
-      <div class="stat-card"><span>PRD</span><strong>${esc(summary.with_prd || 0)}</strong></div>
-      <div class="stat-card"><span>Reports</span><strong>${esc(summary.with_reports || 0)}</strong></div>
+      <div class="stat-card"><span>Loaded</span><strong>${esc(loaded)}${complete ? '' : '+'}</strong></div>
+      ${columns.map((column) => `<div class="stat-card"><span>${esc(column.title)}</span><strong>${esc((column.cards || []).length)}${column.has_more ? '+' : ''}</strong></div>`).join('')}
+      <div class="stat-card"><span>Status</span><strong>${loading ? 'Loading' : 'Ready'}</strong></div>
     </div>
-    <div class="tag-strip">${tags.map(([tag, count]) => `<span class="tag-chip">#${esc(tag)} <b>${esc(count)}</b></span>`).join('') || '<span class="tag-chip muted">No tags yet</span>'}</div>
-    <div class="root-line">${esc(data.root)}</div>
+    <div class="tag-strip"><span class="tag-chip muted">Progressive loading: columns render first, cards arrive in pages.</span></div>
+    <div class="root-line">${esc(state.catalog?.root || 'Workspace root loading...')}</div>
   `;
 }
 
 function archiveColumnCardsHtml(cards = []) {
-  if (!cards.length) return '<div class="empty-column-note">No cards yet</div>';
+  if (!cards.length) return '';
   const groups = {};
   cards.forEach((card) => {
     const match = String(card.workspace_path || '').match(/archive\/(\d{4}-\d{2}-\d{2})\//);
@@ -83,23 +116,32 @@ function archiveColumnCardsHtml(cards = []) {
   `).join('');
 }
 
-function columnCardsHtml(column) {
-  const cards = column.cards || [];
-  if (column.key === 'archive') return archiveColumnCardsHtml(cards);
-  return `<div class="card-list">${cards.map(cardHtml).join('') || '<div class="empty-column-note">No cards yet</div>'}</div>`;
+function columnFooterHtml(column) {
+  if (column.error) return `<div class="error">${esc(column.error)}</div>`;
+  if (column.loading) return '<div class="column-loading"><span></span> Loading cards...</div>';
+  if (column.has_more) return `<button class="load-more" type="button" data-load-more="${esc(column.key)}">Load more</button>`;
+  if (!column.cards.length) return '<div class="empty-column-note">No cards yet</div>';
+  return '';
 }
 
-function renderCatalog(data) {
-  state.catalog = data;
-  const columns = data.columns || [];
+function columnCardsHtml(column) {
+  const cards = column.cards || [];
+  const body = column.key === 'archive'
+    ? archiveColumnCardsHtml(cards)
+    : `<div class="card-list">${cards.map(cardHtml).join('')}</div>`;
+  return `${body}${columnFooterHtml(column)}`;
+}
+
+function renderCatalog() {
+  const columns = state.catalog?.columns || [];
   const nonEmpty = columns.filter((column) => (column.cards || []).length > 0);
-  renderSummary(data);
+  renderSummary();
   $('emptyColumns').innerHTML = '';
   $('board').className = 'board';
   if (nonEmpty.length <= 1) $('board').classList.add('mostly-project');
   $('board').innerHTML = columns.map((column) => `
     <section class="column" data-column="${esc(column.key)}">
-      <div class="column-head"><span class="column-title">${esc(column.title)}</span><span class="count">${(column.cards || []).length}</span></div>
+      <div class="column-head"><span class="column-title">${esc(column.title)}</span><span class="count">${(column.cards || []).length}${column.has_more ? '+' : ''}</span></div>
       ${columnCardsHtml(column)}
     </section>
   `).join('');
@@ -112,17 +154,50 @@ function renderCatalog(data) {
       loadDetail(node.dataset.nestedCardId);
     });
   });
+  document.querySelectorAll('[data-load-more]').forEach((node) => {
+    node.addEventListener('click', () => loadColumn(node.dataset.loadMore, columnState(node.dataset.loadMore).next_offset || 0));
+  });
 }
 
-function fileTreeHtml(nodes = []) {
-  if (!nodes.length) return '<div class="card-summary">No files</div>';
-  return `<ul class="file-tree">${nodes.map((node) => {
-    if (node.type === 'directory') {
-      return `<li><span class="file-dir">${esc(node.name)}/</span>${fileTreeHtml(node.children || [])}</li>`;
-    }
-    const action = node.previewable ? `data-file-path="${esc(node.path)}"` : '';
-    return `<li><button class="file-node" type="button" ${action}>${esc(node.name)}</button><span class="file-size">${esc(node.size || 0)}b</span></li>`;
-  }).join('')}</ul>`;
+function fileIcon(node) {
+  if (node.type === 'directory') return '▸';
+  const name = String(node.name || '').toLowerCase();
+  if (name.endsWith('.md')) return 'M';
+  if (name.endsWith('.json')) return '{}';
+  if (name.endsWith('.py')) return 'py';
+  if (name.endsWith('.js')) return 'js';
+  return '•';
+}
+
+function explorerNodeHtml(node, depth = 0) {
+  const isDir = node.type === 'directory';
+  const label = esc(node.name);
+  const path = esc(node.path || '');
+  const cls = isDir ? 'directory' : 'file';
+  return `<div class="explorer-row ${cls}" data-node-type="${esc(node.type)}" data-file-path="${path}" style="--depth:${depth}">
+    <span class="explorer-caret">${esc(fileIcon(node))}</span>
+    <span class="explorer-name">${label}</span>
+    ${!isDir && node.size ? `<span class="explorer-size">${esc(node.size)}b</span>` : ''}
+  </div>${isDir ? `<div class="explorer-children" data-children-for="${path}"></div>` : ''}`;
+}
+
+function filesExplorerHtml() {
+  return `<div class="files-layout ide-files">
+    <div class="explorer-pane">
+      <div class="explorer-toolbar">
+        <span>Explorer</span>
+        <div class="explorer-actions">
+          <label class="mini-toggle"><input type="checkbox" id="showAllFilesToggle"> Show all</label>
+          <button class="ghost mini" type="button" id="reloadFilesBtn">Reload</button>
+        </div>
+      </div>
+      <div class="explorer-root" id="fileExplorer"><div class="column-loading"><span></span> Loading files...</div></div>
+    </div>
+    <div class="preview-pane">
+      <div class="preview-path" id="filePreviewPath">No file selected</div>
+      <pre id="filePreview" class="file-preview">Select a text file to preview.</pre>
+    </div>
+  </div>`;
 }
 
 function sectionHtml(section) {
@@ -131,7 +206,7 @@ function sectionHtml(section) {
   if (section.kind === 'markdown') {
     body = section.data ? `<pre>${esc(section.data)}</pre>` : '<div class="card-summary">Empty</div>';
   } else if (section.kind === 'file_tree') {
-    body = `<div class="files-layout"><div>${fileTreeHtml(section.data || [])}</div><pre id="filePreview" class="file-preview">Select a text file to preview.</pre></div>`;
+    body = filesExplorerHtml();
   } else if (section.kind === 'fields') {
     const card = section.data || {};
     body = `<div class="kv">
@@ -150,6 +225,66 @@ function sectionHtml(section) {
   return `<section class="section tab-panel ${keyClass} ${section.kind === 'markdown' ? 'markdown' : ''}" data-tab-panel="${esc(section.key)}">${body}</section>`;
 }
 
+async function loadExplorerDirectory(cardId, path = '', target = null, depth = 0) {
+  const container = target || $('fileExplorer');
+  container.innerHTML = '<div class="column-loading"><span></span> Loading files...</div>';
+  try {
+    const params = new URLSearchParams({ path, include_hidden: state.fileExplorerShowAll ? 'true' : 'false' });
+    const data = await api(`/api/cards/${encodeURIComponent(cardId)}/files/list?${params.toString()}`);
+    const children = data.children || [];
+    container.innerHTML = children.length
+      ? children.map((node) => explorerNodeHtml(node, depth)).join('')
+      : '<div class="empty-column-note">Empty directory</div>';
+    bindExplorerRows(cardId, container, depth);
+  } catch (err) {
+    container.innerHTML = `<div class="error">${esc(err.message || err)}</div>`;
+  }
+}
+
+function bindExplorerRows(cardId, rootNode = document, depth = 0) {
+  rootNode.querySelectorAll('.explorer-row').forEach((row) => {
+    row.addEventListener('click', async () => {
+      document.querySelectorAll('.explorer-row.selected').forEach((node) => node.classList.remove('selected'));
+      row.classList.add('selected');
+      const path = row.dataset.filePath || '';
+      if (row.dataset.nodeType === 'directory') {
+        const children = [...document.querySelectorAll('.explorer-children')].find((node) => node.dataset.childrenFor === path);
+        const expanded = row.classList.toggle('expanded');
+        row.querySelector('.explorer-caret').textContent = expanded ? '▾' : '▸';
+        if (!children) return;
+        if (!expanded) {
+          children.innerHTML = '';
+          return;
+        }
+        await loadExplorerDirectory(cardId, path, children, depth + 1);
+        return;
+      }
+      const preview = $('filePreview');
+      const previewPath = $('filePreviewPath');
+      previewPath.textContent = path;
+      preview.textContent = 'Loading...';
+      const content = await api(`/api/cards/${encodeURIComponent(cardId)}/files/content?path=${encodeURIComponent(path)}`);
+      preview.textContent = content.content || '';
+    });
+  });
+}
+
+function initFilesExplorer(cardId) {
+  const explorer = $('fileExplorer');
+  if (!explorer) return;
+  state.fileExplorerShowAll = false;
+  const showAllToggle = $('showAllFilesToggle');
+  if (showAllToggle) {
+    showAllToggle.checked = state.fileExplorerShowAll;
+    showAllToggle.addEventListener('change', () => {
+      state.fileExplorerShowAll = showAllToggle.checked;
+      loadExplorerDirectory(cardId);
+    });
+  }
+  $('reloadFilesBtn')?.addEventListener('click', () => loadExplorerDirectory(cardId));
+  loadExplorerDirectory(cardId);
+}
+
 function renderDetail(detail) {
   const sections = detail.sections || [];
   const active = sections[0] && sections[0].key;
@@ -165,14 +300,7 @@ function renderDetail(detail) {
       button.classList.add('active');
     });
   });
-  document.querySelectorAll('.file-node[data-file-path]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const preview = $('filePreview');
-      preview.textContent = 'Loading...';
-      const content = await api(`/api/cards/${encodeURIComponent(detail.card.id)}/files/content?path=${encodeURIComponent(button.dataset.filePath)}`);
-      preview.textContent = content.content || '';
-    });
-  });
+  initFilesExplorer(detail.card.id);
 }
 
 function openModal() {
@@ -186,7 +314,7 @@ function closeModal() {
   $('detailModal').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('modal-open');
   state.selected = null;
-  if (state.catalog) renderCatalog(state.catalog);
+  if (state.catalog) renderCatalog();
 }
 
 function setFullscreen(on) {
@@ -197,7 +325,7 @@ function setFullscreen(on) {
 
 async function loadDetail(cardId) {
   state.selected = cardId;
-  renderCatalog(state.catalog);
+  renderCatalog();
   openModal();
   $('detailTitle').textContent = 'Loading...';
   $('detailPath').textContent = cardId;
@@ -209,16 +337,35 @@ async function loadDetail(cardId) {
   renderDetail(detail);
 }
 
-async function refresh() {
-  $('summary').textContent = 'Loading...';
+async function loadColumn(key, offset = 0) {
+  const column = columnState(key);
+  if (!column || column.loading) return;
+  updateColumn(key, { loading: true, error: null });
+  renderCatalog();
   try {
-    const ensure = $('ensureCards').checked ? '?ensure=true' : '';
-    const data = await api(`/api/catalog${ensure}`);
-    renderCatalog(data);
+    const params = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) });
+    if ($('ensureCards').checked) params.set('ensure', 'true');
+    const data = await api(`/api/columns/${encodeURIComponent(key)}?${params.toString()}`);
+    const existing = offset ? (column.cards || []) : [];
+    state.catalog.root = data.root || state.catalog.root;
+    updateColumn(key, {
+      title: data.title || column.title,
+      cards: existing.concat(data.cards || []),
+      has_more: Boolean(data.has_more),
+      next_offset: data.next_offset || existing.length + (data.cards || []).length,
+      loading: false,
+      loaded: true,
+    });
   } catch (err) {
-    $('board').innerHTML = `<div class="error">${esc(err.message || err)}</div>`;
-    $('summary').textContent = 'Failed to load catalog';
+    updateColumn(key, { loading: false, loaded: true, error: err.message || String(err) });
   }
+  renderCatalog();
+}
+
+async function refresh() {
+  state.catalog = emptyCatalog();
+  renderCatalog();
+  COLUMN_DEFS.forEach((column) => loadColumn(column.key, 0));
 }
 
 $('refreshBtn').addEventListener('click', refresh);
