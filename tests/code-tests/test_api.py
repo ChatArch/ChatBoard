@@ -52,6 +52,7 @@ def test_catalog_and_detail_endpoints(tmp_path):
     (nested / "note.md").write_text("# Note\n", encoding="utf-8")
     (tmp_path / "projects/chatarch/07-07-demo/playground").mkdir()
     (tmp_path / "projects/chatarch/07-07-demo/scripts").mkdir()
+    (tmp_path / "projects/chatarch/07-07-demo/notes").mkdir()
     (tmp_path / "projects/chatarch/07-07-demo/.venv").mkdir()
     (tmp_path / "projects/chatarch/07-07-demo/card.json").write_text("{}\n", encoding="utf-8")
     listing = client.get(
@@ -72,8 +73,10 @@ def test_catalog_and_detail_endpoints(tmp_path):
         params={"root": str(tmp_path), "include_hidden": "true"},
     )
     assert show_all.status_code == 200
-    assert ".venv" in [item["name"] for item in show_all.json()["children"]]
-    assert "card.json" in [item["name"] for item in show_all.json()["children"]]
+    show_all_names = [item["name"] for item in show_all.json()["children"]]
+    assert "notes" in show_all_names
+    assert ".venv" not in show_all_names
+    assert "card.json" not in show_all_names
     reports = client.get(
         "/api/cards/projects-chatarch-07-07-demo/files/list",
         params={"root": str(tmp_path), "path": "reports"},

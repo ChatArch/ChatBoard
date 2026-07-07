@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from chatboard.models import BoardColumn, DEFAULT_COLUMNS, ProjectCard, column_title
-from chatboard.paths import DEFAULT_AREAS, area_path, is_ignored_dir, resolve_workspace_root
+from chatboard.paths import DEFAULT_AREAS, WORKSPACE_SCAN_IGNORED_DIR_NAMES, area_path, is_ignored_dir, resolve_workspace_root
 from chatboard.services.cards import ensure_card, load_card
 
 
@@ -32,7 +32,7 @@ def _iter_project_dirs(
 ) -> Iterator[Path]:
     root_path = resolve_workspace_root(root)
     seen: set[Path] = set()
-    ignored_parts = {".git", "node_modules", ".venv", "__pycache__", "playground", ".trash"}
+    ignored_parts = WORKSPACE_SCAN_IGNORED_DIR_NAMES
     for area in areas:
         base = area_path(root_path, area)
         if not base.exists():
