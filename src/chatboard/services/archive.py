@@ -23,28 +23,29 @@ def archive(card_id: str, root: str | Path | None = None, dry_run: bool = False)
     return move_card(card_id, "archive", stage="archived", root=root, dry_run=dry_run)
 
 
-def discard(card_id: str, reason: str, root: str | Path | None = None, dry_run: bool = False) -> dict:
+def _move_with_reason(
+    card_id: str,
+    area: str,
+    stage: str,
+    reason: str,
+    root: str | Path | None,
+    dry_run: bool,
+) -> dict:
+    result = move_card(card_id, area, stage=stage, root=root, dry_run=dry_run)
+    result["reason"] = reason
     if dry_run:
-        result = move_card(card_id, "discard", stage="discarded", root=root, dry_run=True)
-        result["reason"] = reason
         return result
-    project_path = find_card_path(card_id, root)
-    if project_path is None:
-        raise FileNotFoundError(card_id)
-    card = ensure_card(project_path, root)
-    card.area = "discard"
-    card.stage = "discarded"
+    destination = Path(result["to"])
+    card = ensure_card(destination, root)
     card.archive.reason = reason
-    save_card(project_path, card)
-    return move_card(card_id, "discard", stage="discarded", root=root, dry_run=dry_run)
+    save_card(destination, card)
+    result["card"] = card.to_dict()
+    return result
+
+
+def discard(card_id: str, reason: str, root: str | Path | None = None, dry_run: bool = False) -> dict:
+    return _move_with_reason(card_id, "discard", "discarded", reason, root, dry_run)
 
 
 def trash(card_id: str, reason: str, root: str | Path | None = None, dry_run: bool = False) -> dict:
-    project_path = find_card_path(card_id, root)
-    if project_path is None:
-        raise FileNotFoundError(card_id)
-    card = ensure_card(project_path, root)
-    card.stage = "trashed"
-    card.archive.reason = reason
-    save_card(project_path, card)
-    return move_card(card_id, "trash", stage="trashed", root=root, dry_run=dry_run)
+    return _move_with_reason(card_id, "trash", "trashed", reason, root, dry_run)

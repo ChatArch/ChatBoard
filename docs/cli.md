@@ -34,6 +34,8 @@ chatbd
 
 `--dry-run` 只存在于移动类命令。带 `--dry-run` 时，命令返回预计路径和 metadata，不移动目录。
 
+需要参数的命令使用 ChatStyle 统一输入解析：参数缺失且当前终端可交互时会自动补问，`-i` 强制交互，`-I` 禁止交互并快速失败。参数完整时仍按普通 CLI 方式直接执行。
+
 ## Workspace 根目录
 
 新 CLI 不提供 `--root` 或 `--workspace`。ChatBoard 通过 ChatEnv 字段 `CHATBOARD_WORKSPACE_ROOT` 读取 workspace 根目录，缺省值为：

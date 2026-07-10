@@ -75,11 +75,9 @@ def add_item(discussion_id: str, card_id: str, root: str | Path | None = None, d
         raise FileNotFoundError(discussion_id)
     if item_path is None:
         raise FileNotFoundError(card_id)
-    discussion_card = load_card(discussion_path, root_path) if dry_run else ensure_card(discussion_path, root_path)
+    discussion_card = load_card(discussion_path, root_path)
     if discussion_card.area != "discussion":
         raise ValueError(f"not a discussion card: {discussion_id}")
-    if not dry_run:
-        ensure_card(item_path, root_path)
     destination = discussion_path / "Items" / item_path.name
     if destination.exists():
         raise FileExistsError(destination)
@@ -92,6 +90,8 @@ def add_item(discussion_id: str, card_id: str, root: str | Path | None = None, d
     }
     if dry_run:
         return result
+    ensure_card(discussion_path, root_path)
+    ensure_card(item_path, root_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(item_path.as_posix(), destination.as_posix())
     updated_discussion = ensure_card(discussion_path, root_path)

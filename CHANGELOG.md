@@ -8,6 +8,8 @@
 - Resolve the default workspace from ChatEnv `CHATBOARD_WORKSPACE_ROOT`.
 - Keep `scan` and `catalog` read-only; metadata creation is explicit through `project card ensure`.
 - Remove low-frequency Discussion metadata, Archive readiness, and standalone Trash commands from the public CLI.
+- Use ChatStyle schemas and the shared `-i/-I` interaction contract for required management inputs.
+- Preflight move destinations before writing metadata so conflicts leave source Projects unchanged.
 
 ## 0.1.2 - 2026-07-07
 

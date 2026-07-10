@@ -101,7 +101,10 @@ def ensure_card_api(payload: dict[str, Any] = Body(...), root: str | None = None
     project_path = payload.get("project_path") or payload.get("path")
     if not project_path:
         raise HTTPException(400, "project_path is required")
-    return ensure_card(project_path, root=_root(root)).to_dict()
+    try:
+        return ensure_card(project_path, root=_root(root)).to_dict()
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"project directory not found: {project_path}") from exc
 
 
 @app.patch("/api/cards/{card_id}")

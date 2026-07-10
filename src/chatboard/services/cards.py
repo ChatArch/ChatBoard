@@ -182,6 +182,8 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
 
 def ensure_card(project_path: str | Path, root: str | Path | None = None) -> ProjectCard:
     path = Path(project_path).expanduser().resolve()
+    if not path.exists() or not path.is_dir():
+        raise FileNotFoundError(path)
     root_path = resolve_workspace_root(root)
     card = load_markdown_card(path, root_path)
     if card is None:
@@ -351,7 +353,7 @@ def move_card(
     if project_path is None:
         raise FileNotFoundError(card_id)
     root_path = resolve_workspace_root(root)
-    card = load_card(project_path, root_path) if dry_run else ensure_card(project_path, root_path)
+    card = load_card(project_path, root_path)
     old_relative = Path(card.workspace_path)
     if area == "archive":
         date_prefix = utc_now()[:10]
@@ -381,6 +383,7 @@ def move_card(
     }
     if dry_run:
         return result
+    card = ensure_card(project_path, root_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(project_path.as_posix(), destination.as_posix())
     card.area = area  # type: ignore[assignment]

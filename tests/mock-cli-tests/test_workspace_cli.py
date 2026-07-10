@@ -52,6 +52,7 @@ def test_scan_and_catalog_are_read_only_commands():
 
     scan_help = runner.invoke(main, ["project", "scan", "--help"])
     catalog_help = runner.invoke(main, ["project", "catalog", "--help"])
+    show_help = runner.invoke(main, ["project", "card", "show", "--help"])
 
     assert scan_help.exit_code == 0
     assert catalog_help.exit_code == 0
@@ -59,6 +60,44 @@ def test_scan_and_catalog_are_read_only_commands():
     assert "--ensure" not in catalog_help.output
     assert "--root" not in scan_help.output
     assert "--root" not in catalog_help.output
+    assert "-i, --interactive" in show_help.output
+    assert "-I, --no-interactive" in show_help.output
+
+
+def test_required_inputs_fail_fast_when_interaction_is_disabled():
+    result = CliRunner().invoke(main, ["project", "card", "show", "-I"])
+
+    assert result.exit_code != 0
+    assert "Missing required value: card_id" in result.output
+
+
+def test_card_ensure_prompts_for_missing_project_path(monkeypatch, tmp_path):
+    project = _project(tmp_path)
+    _configure_workspace(monkeypatch, tmp_path)
+    monkeypatch.setattr("chatstyle.core.interactive.is_interactive_available", lambda: True)
+    monkeypatch.setattr(
+        "chatstyle.tui.prompt.ask_text",
+        lambda label, default="", password=False, style=None: str(project),
+    )
+
+    result = CliRunner().invoke(main, ["project", "card", "ensure"], catch_exceptions=False)
+
+    assert result.exit_code == 0
+    assert (project / "card.md").exists()
+
+
+def test_card_ensure_rejects_missing_directory(monkeypatch, tmp_path):
+    missing = tmp_path / "projects/missing"
+    _configure_workspace(monkeypatch, tmp_path)
+
+    result = CliRunner().invoke(
+        main,
+        ["project", "card", "ensure", str(missing), "-I"],
+    )
+
+    assert result.exit_code != 0
+    assert "project directory not found" in result.output
+    assert not missing.exists()
 
 
 def test_catalog_uses_workspace_from_chatenv(monkeypatch, tmp_path):

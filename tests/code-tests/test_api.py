@@ -85,6 +85,20 @@ def test_catalog_and_detail_endpoints(tmp_path):
     assert reports.json()["children"][0]["path"] == "reports/note.md"
 
 
+def test_ensure_endpoint_rejects_missing_project_directory(tmp_path):
+    client = TestClient(app)
+    missing = tmp_path / "projects/missing"
+
+    response = client.post(
+        "/api/cards/ensure",
+        params={"root": str(tmp_path)},
+        json={"project_path": str(missing)},
+    )
+
+    assert response.status_code == 404
+    assert not missing.exists()
+
+
 def test_column_endpoint_paginates_cards(tmp_path):
     for index in range(3):
         path = tmp_path / f"projects/chatarch/07-07-demo-{index}"
