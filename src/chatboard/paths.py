@@ -31,7 +31,9 @@ WORKSPACE_SCAN_IGNORED_DIR_NAMES = DEFAULT_GITIGNORE_DIR_NAMES | {
 def resolve_workspace_root(root: str | Path | None = None) -> Path:
     if root is not None:
         return Path(root).expanduser().resolve()
-    return Path.home().joinpath("Playground").resolve()
+    from chatboard.config import workspace_root_from_chatenv
+
+    return workspace_root_from_chatenv()
 
 
 def as_workspace_relative(path: str | Path, root: str | Path | None = None) -> str:

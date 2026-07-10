@@ -23,20 +23,21 @@ ChatBoard: ChatArch kanban board tooling package
 
 ```bash
 pip install -e ".[dev]"
-chatboard --help
-chatboard --version
+chatbd --help
+chatbd --version
+chatbd project catalog
 python -m pytest -q
 python -m build
 ```
 
-## CLI Contract
+## CLI Docs
 
-This template depends on `chatstyle>=0.1.0,<0.2.0` and `chatenv>=0.2.0,<0.3.0`. New commands should prefer:
+`chatbd` is ChatBoard's auxiliary management CLI. The Web UI remains the primary product surface; the CLI keeps only Project read projections, metadata maintenance, and standardized lifecycle operations. See `docs/cli.md` for:
 
-- `CommandSchema` / `CommandField` for inputs.
-- `add_interactive_option()` for the shared `-i/-I` switch.
-- `resolve_command_inputs()` for missing args, defaults, TTY behavior, and validation.
-- Generate `config.py` and a `chatenv.configs` entry point by default so the package is ChatEnv-discoverable; use `--without-chatenv-provider` only when ChatEnv integration is intentionally not needed.
+- Command tree and side-effect boundaries.
+- `ensure` rules for creating `card.md` files.
+- Metadata derivation for area, stage, id, title, summary, tags, and links.
+- Movement rules for Discussion, Archive, Discard, and low-level card moves.
 
 ## Layout
 

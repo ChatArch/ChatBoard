@@ -29,7 +29,7 @@ Repository = "https://github.com/ChatArch/ChatBoard"
 Documentation = "https://ChatArch.github.io/ChatBoard"
 
 [project.scripts]
-chatboard = "chatboard.cli:main"
+chatbd = "chatboard.cli:main"
 
 [project.entry-points."chatenv.configs"]
 chatboard = "chatboard.config"

@@ -2,6 +2,10 @@
 
 Long-lived documentation for `ChatBoard` lives here.
 
+## Topics
+
+- [CLI reference](cli.md): command tree, side effects, and `ensure` derivation rules.
+
 ## Local Preview
 
 ```bash

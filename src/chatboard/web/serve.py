@@ -9,11 +9,13 @@ from pathlib import Path
 
 import click
 
+from chatboard.paths import resolve_workspace_root
+
 
 def serve(host: str = "127.0.0.1", port: int = 8000, root: str | Path | None = None, reload: bool = False) -> None:
+    workspace_root = resolve_workspace_root(root)
     env = os.environ.copy()
-    if root is not None:
-        env["CHATBOARD_WORKSPACE_ROOT"] = str(Path(root).expanduser().resolve())
+    env["CHATBOARD_WORKSPACE_ROOT"] = str(workspace_root)
     args = [
         sys.executable,
         "-m",

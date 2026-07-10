@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+from chatboard.models import utc_now
+from chatboard.services.archive import discard
 from chatboard.services.cards import card_detail, ensure_card, move_card
 from chatboard.services.discussion import add_item, create_discussion
 from chatboard.services.workspace import catalog, scan
@@ -35,6 +39,15 @@ def test_ensure_writes_card_md_and_catalog_groups_columns(tmp_path):
     assert card.id == "projects-chatarch-07-07-demo"
     project_column = next(col for col in board["columns"] if col["key"] == "project")
     assert [item["id"] for item in project_column["cards"]] == [card.id]
+
+
+def test_ensure_rejects_a_missing_project_directory(tmp_path):
+    missing = tmp_path / "projects/missing"
+
+    with pytest.raises(FileNotFoundError):
+        ensure_card(missing, root=tmp_path)
+
+    assert not missing.exists()
 
 
 def test_nested_project_topic_dirs_are_individual_cards(tmp_path):
@@ -107,6 +120,55 @@ def test_move_card_to_discussion_moves_directory_and_updates_card(tmp_path):
     assert moved.stage == "review"
 
 
+def test_move_dry_run_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    card_id = "projects-chatarch-07-07-demo"
+
+    result = move_card(card_id, "trash", root=tmp_path, dry_run=True)
+
+    assert result["dry_run"] is True
+    assert project.exists()
+    assert not (project / "card.md").exists()
+
+
+def test_move_destination_conflict_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    (tmp_path / f"archive/{utc_now()[:10]}/chatarch/07-07-demo").mkdir(parents=True)
+
+    with pytest.raises(FileExistsError):
+        move_card(
+            "projects-chatarch-07-07-demo",
+            "archive",
+            root=tmp_path,
+        )
+
+    assert project.exists()
+    assert not (project / "card.md").exists()
+
+
+def test_discard_destination_conflict_does_not_mutate_source_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    card = ensure_card(project, root=tmp_path)
+    original = (project / "card.md").read_text(encoding="utf-8")
+    (tmp_path / "discard/chatarch/07-07-demo").mkdir(parents=True)
+
+    with pytest.raises(FileExistsError):
+        discard(card.id, reason="superseded", root=tmp_path)
+
+    assert (project / "card.md").read_text(encoding="utf-8") == original
+
+
+def test_discard_reason_survives_the_directory_move(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    card = ensure_card(project, root=tmp_path)
+
+    discard(card.id, reason="superseded", root=tmp_path)
+
+    discarded = scan(tmp_path)[0]
+    assert discarded.area == "discard"
+    assert discarded.archive.reason == "superseded"
+
+
 def test_discussion_card_lists_nested_items_without_top_level_duplicates(tmp_path):
     _project(tmp_path, "discussion/07-07-chatboard-v2", "ChatBoard v2 Discussion")
     item = _project(tmp_path, "discussion/07-07-chatboard-v2/Items/07-07-demo", "Nested Demo")
@@ -138,3 +200,38 @@ def test_create_discussion_and_add_item_moves_project_into_items(tmp_path):
     assert [item.id for item in cards] == [discussion["id"]]
     assert cards[0].nested_items[0].title == "Nested Demo"
     assert cards[0].nested_items[0].area == "discussion"
+
+
+def test_discussion_add_item_dry_run_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo", "Nested Demo")
+    discussion_path = _project(tmp_path, "discussion/07-07-topic", "Topic")
+    (discussion_path / "Items").mkdir()
+
+    result = add_item(
+        "discussion-07-07-topic",
+        "projects-chatarch-07-07-demo",
+        root=tmp_path,
+        dry_run=True,
+    )
+
+    assert result["dry_run"] is True
+    assert project.exists()
+    assert not (project / "card.md").exists()
+    assert not (discussion_path / "card.md").exists()
+
+
+def test_discussion_add_item_conflict_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo", "Nested Demo")
+    discussion_path = _project(tmp_path, "discussion/07-07-topic", "Topic")
+    (discussion_path / "Items/07-07-demo").mkdir(parents=True)
+
+    with pytest.raises(FileExistsError):
+        add_item(
+            "discussion-07-07-topic",
+            "projects-chatarch-07-07-demo",
+            root=tmp_path,
+        )
+
+    assert project.exists()
+    assert not (project / "card.md").exists()
+    assert not (discussion_path / "card.md").exists()
