@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Replace the flat `chatboard` CLI with the focused `chatbd project ...` management tree.
+- Resolve the default workspace from ChatEnv `CHATBOARD_WORKSPACE_ROOT`.
+- Keep `scan` and `catalog` read-only; metadata creation is explicit through `project card ensure`.
+- Remove low-frequency Discussion metadata, Archive readiness, and standalone Trash commands from the public CLI.
+
 ## 0.1.2 - 2026-07-07
 
 ### Added

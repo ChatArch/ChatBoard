@@ -351,7 +351,7 @@ def move_card(
     if project_path is None:
         raise FileNotFoundError(card_id)
     root_path = resolve_workspace_root(root)
-    card = ensure_card(project_path, root_path)
+    card = load_card(project_path, root_path) if dry_run else ensure_card(project_path, root_path)
     old_relative = Path(card.workspace_path)
     if area == "archive":
         date_prefix = utc_now()[:10]

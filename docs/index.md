@@ -2,6 +2,10 @@
 
 这里收纳 `ChatBoard` 的长期维护文档。
 
+## 主题
+
+- [CLI 文档](cli.md)：命令树、副作用边界、`ensure` 与 workspace/card 推导规则。
+
 ## 本地预览
 
 ```bash

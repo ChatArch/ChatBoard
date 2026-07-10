@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from chatboard.services.archive import discard
 from chatboard.services.cards import card_detail, ensure_card, move_card
 from chatboard.services.discussion import add_item, create_discussion
 from chatboard.services.workspace import catalog, scan
@@ -107,6 +108,28 @@ def test_move_card_to_discussion_moves_directory_and_updates_card(tmp_path):
     assert moved.stage == "review"
 
 
+def test_move_dry_run_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    card_id = "projects-chatarch-07-07-demo"
+
+    result = move_card(card_id, "trash", root=tmp_path, dry_run=True)
+
+    assert result["dry_run"] is True
+    assert project.exists()
+    assert not (project / "card.md").exists()
+
+
+def test_discard_reason_survives_the_directory_move(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo")
+    card = ensure_card(project, root=tmp_path)
+
+    discard(card.id, reason="superseded", root=tmp_path)
+
+    discarded = scan(tmp_path)[0]
+    assert discarded.area == "discard"
+    assert discarded.archive.reason == "superseded"
+
+
 def test_discussion_card_lists_nested_items_without_top_level_duplicates(tmp_path):
     _project(tmp_path, "discussion/07-07-chatboard-v2", "ChatBoard v2 Discussion")
     item = _project(tmp_path, "discussion/07-07-chatboard-v2/Items/07-07-demo", "Nested Demo")
@@ -138,3 +161,21 @@ def test_create_discussion_and_add_item_moves_project_into_items(tmp_path):
     assert [item.id for item in cards] == [discussion["id"]]
     assert cards[0].nested_items[0].title == "Nested Demo"
     assert cards[0].nested_items[0].area == "discussion"
+
+
+def test_discussion_add_item_dry_run_does_not_create_card_metadata(tmp_path):
+    project = _project(tmp_path, "projects/chatarch/07-07-demo", "Nested Demo")
+    discussion_path = _project(tmp_path, "discussion/07-07-topic", "Topic")
+    (discussion_path / "Items").mkdir()
+
+    result = add_item(
+        "discussion-07-07-topic",
+        "projects-chatarch-07-07-demo",
+        root=tmp_path,
+        dry_run=True,
+    )
+
+    assert result["dry_run"] is True
+    assert project.exists()
+    assert not (project / "card.md").exists()
+    assert not (discussion_path / "card.md").exists()

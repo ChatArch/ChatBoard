@@ -230,6 +230,9 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
             reports=reports,
         ),
         discussion=DiscussionState(status="review" if area == "discussion" else "not_started"),
-        archive=ArchiveState(ready=False),
+        archive=ArchiveState(
+            ready=str(metadata.get("stage") or "") == "archive_ready",
+            reason=metadata.get("discard_reason") or metadata.get("archive_reason"),
+        ),
         timestamps=CardTimestamps(),
     )

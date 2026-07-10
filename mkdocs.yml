@@ -6,4 +6,5 @@ theme:
   language: zh
 nav:
   - 首页: index.md
+  - CLI 文档: cli.md
   - English: index.en.md

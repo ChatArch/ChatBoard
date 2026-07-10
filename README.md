@@ -23,20 +23,21 @@ ChatBoard: ChatArch kanban board tooling package
 
 ```bash
 pip install -e ".[dev]"
-chatboard --help
-chatboard --version
+chatbd --help
+chatbd --version
+chatbd project catalog
 python -m pytest -q
 python -m build
 ```
 
-## CLI 规范
+## CLI 文档
 
-这个模板默认依赖 `chatstyle>=0.1.0,<0.2.0` 和 `chatenv>=0.2.0,<0.3.0`，新的命令应优先使用：
+`chatbd` 是 ChatBoard 的辅助管理 CLI。Web UI 是主要产品形态；当前 CLI 只保留 Project 的只读投影、metadata maintenance 和规范化 lifecycle 操作。长期文档见 `docs/cli.md`：
 
-- `CommandSchema` / `CommandField` 描述输入。
-- `add_interactive_option()` 提供统一 `-i/-I`。
-- `resolve_command_inputs()` 统一缺参补问、默认值、TTY 与校验。
-- 默认生成 `config.py` 和 `chatenv.configs` entry point，使包可被 ChatEnv 发现；只有明确不需要 ChatEnv 接入时才使用 `--without-chatenv-provider`。
+- 命令树与命令副作用边界。
+- `ensure` 创建 `card.md` 的推导规则。
+- area、stage、id、title、summary、tags、links 等 metadata 的符号逻辑。
+- Discussion、Archive、Discard 和底层 card move 的移动规则。
 
 ## 目录结构
 

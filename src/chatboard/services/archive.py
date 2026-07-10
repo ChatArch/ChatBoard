@@ -24,6 +24,10 @@ def archive(card_id: str, root: str | Path | None = None, dry_run: bool = False)
 
 
 def discard(card_id: str, reason: str, root: str | Path | None = None, dry_run: bool = False) -> dict:
+    if dry_run:
+        result = move_card(card_id, "discard", stage="discarded", root=root, dry_run=True)
+        result["reason"] = reason
+        return result
     project_path = find_card_path(card_id, root)
     if project_path is None:
         raise FileNotFoundError(card_id)
