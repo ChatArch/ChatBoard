@@ -90,7 +90,9 @@ class ProjectCard:
     workspace_path: str
     area: Area = "projects"
     stage: str = "development"
+    description: str = ""
     summary: str = ""
+    date: str | None = None
     schema_version: str = CARD_SCHEMA_VERSION
     type: str = "project"
     priority: int = 0

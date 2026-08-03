@@ -6,7 +6,7 @@
 
 ```text
 chatbd
-├── serve [--host HOST] [--port PORT] [--reload]
+├── serve [--host HOST] [--port PORT] [--root PATH] [--reload] [--username TEXT] [--password TEXT | --password-file PATH]
 └── project
     ├── scan
     ├── catalog
@@ -38,7 +38,7 @@ chatbd
 
 ## Workspace 根目录
 
-新 CLI 不提供 `--root` 或 `--workspace`。ChatBoard 通过 ChatEnv 字段 `CHATBOARD_WORKSPACE_ROOT` 读取 workspace 根目录，缺省值为：
+Project 管理命令不提供 `--root` 或 `--workspace`。ChatBoard 通过 ChatEnv 字段 `CHATBOARD_WORKSPACE_ROOT` 读取 workspace 根目录，缺省值为：
 
 ```text
 ~/Playground
@@ -363,6 +363,67 @@ chatbd project discard CARD_ID --reason "superseded" --dry-run
 
 ```bash
 chatbd serve --host 127.0.0.1 --port 8000
+```
+
+`serve --root PATH` 会为当前服务进程设置 `CHATBOARD_WORKSPACE_ROOT`。
+
+默认不启用登录，适合只绑定 `127.0.0.1` 的本地开发场景。
+
+需要给 Web UI 和 API 加登录门禁时，启动时提供密码：
+
+```bash
+chatbd serve --username admin@example.com --password "your-password"
+```
+
+更推荐用环境变量，避免密码进入 shell history：
+
+```bash
+CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD="your-password" chatbd serve
+```
+
+也可以从文件读取密码：
+
+```bash
+chatbd serve --password-file ~/.config/chatboard/password
+```
+
+启用后：
+
+- 未登录访问 `/` 会跳转到 `/login`。
+- 未登录访问 workspace API 会返回 `401`。
+- `/api/health` 和 `/api/auth` 保持公开，方便健康检查和登录页判断状态。
+- 登录会写入 `HttpOnly` session cookie。
+- `POST /api/logout` 会清除 session cookie。
+
+可选环境变量：
+
+| 变量 | 作用 |
+| --- | --- |
+| `CHATBOARD_USERNAME` | 可选登录账号；设置后登录必须同时匹配账号和密码 |
+| `CHATBOARD_PASSWORD` | 启用登录并设置登录密码 |
+| `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
+| `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |
+| `CHATBOARD_COOKIE_SECURE` | 为 `1/true/yes/on` 时设置 Secure cookie |
+
+通过 HTTPS 反向代理公开服务时，应启用 `CHATBOARD_COOKIE_SECURE`，并在反向代理层为登录接口配置请求限速。这个可选门禁用于小规模 ChatBoard 部署，不替代 SSO 或 MFA。
+
+## Machines 数据
+
+Machines 页面从 workspace 根目录的 `.chatboard/machines.json` 读取只读机器清单。机器清单属于本地部署数据，不应提交到 ChatBoard 源码仓库。最小格式如下：
+
+```json
+{
+  "schema": "chatboard.machines.v1",
+  "machines": [
+    {
+      "id": "local-dev",
+      "title": "Local development machine",
+      "group": "local",
+      "status": "ok",
+      "roles": ["development"]
+    }
+  ]
+}
 ```
 
 开发时可加：

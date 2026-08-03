@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,9 @@ def test_scan_infers_cards_without_writing(tmp_path):
 
     assert len(cards) == 1
     assert cards[0].title == "Demo Card"
+    assert cards[0].description == "A useful task."
+    assert cards[0].summary == "A useful task."
+    assert cards[0].date == f"{datetime.now().year}-07-07"
     assert cards[0].area == "projects"
     assert cards[0].stage == "development"
     assert not (project / "card.md").exists()
@@ -88,6 +92,9 @@ def test_card_md_frontmatter_has_priority_over_inference(tmp_path):
 
     assert card.id == "custom-card"
     assert card.title == "Frontmatter Title"
+    assert card.description == "Frontmatter summary."
+    assert card.summary == "Frontmatter summary."
+    assert card.date == f"{datetime.now().year}-07-07"
     assert card.stage == "validation"
     assert card.priority == 4
     assert card.tags == ["chatarch", "chatboard"]

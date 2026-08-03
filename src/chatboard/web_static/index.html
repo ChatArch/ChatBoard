@@ -15,10 +15,15 @@
     <div class="actions">
       <label class="ensure"><input id="ensureCards" type="checkbox"> ensure card.md</label>
       <button id="refreshBtn">Refresh</button>
+      <button id="logoutBtn" class="ghost" type="button" hidden>Logout</button>
     </div>
   </header>
   <main class="layout">
     <section class="board-shell">
+      <nav class="page-tabs" aria-label="ChatBoard pages">
+        <button class="page-tab active" type="button" data-page-tab="projects">Projects</button>
+        <button class="page-tab" type="button" data-page-tab="machines">Machines</button>
+      </nav>
       <div id="summary" class="summary">Loading...</div>
       <div id="emptyColumns" class="empty-columns"></div>
       <div id="board" class="board"></div>

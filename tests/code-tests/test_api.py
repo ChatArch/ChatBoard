@@ -1,3 +1,5 @@
+from datetime import datetime
+import json
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -29,11 +31,18 @@ def test_catalog_and_detail_endpoints(tmp_path):
 
     assert catalog.status_code == 200
     assert catalog.json()["total_cards"] == 1
+    first_card = catalog.json()["columns"][0]["cards"][0]
+    assert first_card["description"] == "API task."
+    assert first_card["summary"] == "API task."
+    assert first_card["date"] == f"{datetime.now().year}-07-07"
 
     detail = client.get("/api/cards/projects-chatarch-07-07-demo", params={"root": str(tmp_path)})
 
     assert detail.status_code == 200
     assert detail.json()["card"]["title"] == "Demo API"
+    assert detail.json()["card"]["description"] == "API task."
+    assert detail.json()["card"]["summary"] == "API task."
+    assert detail.json()["card"]["date"] == f"{datetime.now().year}-07-07"
     assert {section["key"] for section in detail.json()["sections"]} >= {"overview", "files", "prd", "progress"}
 
     files = client.get("/api/cards/projects-chatarch-07-07-demo/files", params={"root": str(tmp_path)})
@@ -129,3 +138,94 @@ def test_index_serves_static_page():
 
     assert response.status_code == 200
     assert "ChatBoard" in response.text
+
+
+def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_USERNAME", "admin")
+    monkeypatch.setenv("CHATBOARD_PASSWORD", "secret")
+    _project(tmp_path)
+    client = TestClient(app)
+
+    health = client.get("/api/health")
+    assert health.status_code == 200
+    assert client.get("/api/auth").json() == {"enabled": True, "authenticated": False, "username_required": True}
+
+    root = client.get("/", follow_redirects=False)
+    assert root.status_code == 303
+    assert root.headers["location"] == "/login"
+
+    login_page = client.get("/login")
+    assert login_page.status_code == 200
+    assert "ChatBoard Login" in login_page.text
+    assert 'type="text"' in login_page.text
+    assert 'type="email"' not in login_page.text
+
+    blocked = client.get("/api/catalog", params={"root": str(tmp_path)})
+    assert blocked.status_code == 401
+
+    bad_login = client.post("/api/login", json={"username": "admin", "password": "wrong"})
+    assert bad_login.status_code == 401
+
+    bad_user = client.post("/api/login", json={"username": "other@example.com", "password": "secret"})
+    assert bad_user.status_code == 401
+
+    good_login = client.post("/api/login", json={"username": "admin", "password": "secret"})
+    assert good_login.status_code == 200
+    assert "chatboard_session" in client.cookies
+    assert client.get("/api/auth").json() == {"enabled": True, "authenticated": True, "username_required": True}
+
+    catalog = client.get("/api/catalog", params={"root": str(tmp_path)})
+    assert catalog.status_code == 200
+    assert catalog.json()["total_cards"] == 1
+
+    logout = client.post("/api/logout")
+    assert logout.status_code == 200
+    assert "chatboard_session" not in client.cookies
+    assert client.get("/api/catalog", params={"root": str(tmp_path)}).status_code == 401
+
+
+def test_auth_gate_supports_password_only(monkeypatch):
+    monkeypatch.delenv("CHATBOARD_USERNAME", raising=False)
+    monkeypatch.setenv("CHATBOARD_PASSWORD", "secret")
+    client = TestClient(app)
+
+    assert client.get("/api/auth").json()["username_required"] is False
+    response = client.post("/api/login", json={"password": "secret"})
+
+    assert response.status_code == 200
+    assert "chatboard_session" in client.cookies
+
+
+def test_machines_endpoints_normalize_registry_fields(tmp_path):
+    registry = tmp_path / ".chatboard" / "machines.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        json.dumps(
+            {
+                "schema": "chatboard.machines.v1",
+                "machines": [
+                    {
+                        "id": "demo",
+                        "title": "Demo",
+                        "roles": "worker",
+                        "aliases": None,
+                        "evidence": "reports/demo.md",
+                        "tools": "invalid",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    client = TestClient(app)
+
+    listing = client.get("/api/machines", params={"root": str(tmp_path)})
+    detail = client.get("/api/machines/demo", params={"root": str(tmp_path)})
+
+    assert listing.status_code == 200
+    machine = listing.json()["machines"][0]
+    assert machine["roles"] == ["worker"]
+    assert machine["aliases"] == []
+    assert machine["evidence"] == ["reports/demo.md"]
+    assert machine["tools"] == {}
+    assert detail.status_code == 200
