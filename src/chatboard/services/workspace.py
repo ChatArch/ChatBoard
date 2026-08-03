@@ -63,12 +63,25 @@ def iter_project_dirs(
     return list(_iter_project_dirs(root, areas=areas, include_nested=include_nested))
 
 
+def _date_sort_value(date: str | None) -> int:
+    if not date:
+        return 0
+    try:
+        return int(date.replace("-", ""))
+    except ValueError:
+        return 0
+
+
+def _card_sort_key(card: ProjectCard) -> tuple[str, int, int, str]:
+    return (card.column, -_date_sort_value(card.date), -card.priority, card.title.lower())
+
+
 def scan(root: str | Path | None = None, ensure: bool = False) -> list[ProjectCard]:
     cards: list[ProjectCard] = []
     for project_path in iter_project_dirs(root):
         card = ensure_card(project_path, root) if ensure else load_card(project_path, root)
         cards.append(card)
-    return sorted(cards, key=lambda card: (card.column, card.priority * -1, card.title.lower()))
+    return sorted(cards, key=_card_sort_key)
 
 
 def _areas_for_column(column: str) -> tuple[str, ...]:
@@ -93,22 +106,15 @@ def column_page(
     root_path = resolve_workspace_root(root)
     offset = max(offset, 0)
     limit = min(max(limit, 1), 100)
-    cards: list[ProjectCard] = []
-    matched = 0
-    has_more = False
+    matched_cards: list[ProjectCard] = []
     for project_path in _iter_project_dirs(root_path, areas=_areas_for_column(column)):
         card = ensure_card(project_path, root_path) if ensure else load_card(project_path, root_path)
         if card.column != column:
             continue
-        if matched < offset:
-            matched += 1
-            continue
-        if len(cards) >= limit:
-            has_more = True
-            break
-        cards.append(card)
-        matched += 1
-    cards.sort(key=lambda card: (card.priority * -1, card.title.lower()))
+        matched_cards.append(card)
+    matched_cards.sort(key=_card_sort_key)
+    cards = matched_cards[offset:offset + limit]
+    has_more = offset + limit < len(matched_cards)
     next_offset = offset + len(cards)
     return {
         "root": root_path.as_posix(),

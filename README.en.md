@@ -38,6 +38,8 @@ python -m build
 - `ensure` rules for creating `card.md` files.
 - Metadata derivation for area, stage, id, title, summary, tags, and links.
 - Movement rules for Discussion, Archive, Discard, and low-level card moves.
+- Optional `chatbd serve` login gate via `--username`, `--password`, `--password-file`, `CHATBOARD_USERNAME`, and `CHATBOARD_PASSWORD`.
+- Card date/description/summary rendering and a Machines page backed by workspace-local `.chatboard/machines.json` data.
 
 ## Layout
 

@@ -19,7 +19,7 @@ from chatboard.models import (
     VALID_STAGES,
     utc_now,
 )
-from chatboard.paths import DEFAULT_GITIGNORE_DIR_NAMES, DEFAULT_GITIGNORE_FILE_NAMES, area_path, as_workspace_relative, resolve_workspace_root
+from chatboard.paths import DEFAULT_GITIGNORE_DIR_NAMES, DEFAULT_GITIGNORE_FILE_NAMES, area_path, as_workspace_relative, infer_workspace_date, resolve_workspace_root
 from chatboard.storage.markdown_card import load_card as load_markdown_card
 from chatboard.storage.markdown_card import save_card
 
@@ -151,7 +151,9 @@ def infer_card(project_path: str | Path, root: str | Path | None = None) -> Proj
     return ProjectCard(
         id=slugify_id(relative),
         title=_title_from_project(path),
+        description=_summary_from_prd(path),
         summary=_summary_from_prd(path),
+        date=infer_workspace_date(path, root_path),
         area=area,  # type: ignore[arg-type]
         stage=stage,
         workspace_path=relative,

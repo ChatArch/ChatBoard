@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+
+- Add an optional `chatbd serve` account/password login gate for the Web UI and workspace APIs.
+- Add card date, description, summary, and date-grouped dashboard rendering.
+- Add a Machines page backed by workspace-local `.chatboard/machines.json` inventory data.
+
 ### Changed
 
 - Replace the flat `chatboard` CLI with the focused `chatbd project ...` management tree.
@@ -10,6 +16,7 @@
 - Remove low-frequency Discussion metadata, Archive readiness, and standalone Trash commands from the public CLI.
 - Use ChatStyle schemas and the shared `-i/-I` interaction contract for required management inputs.
 - Preflight move destinations before writing metadata so conflicts leave source Projects unchanged.
+- Sort paginated card columns before slicing so page boundaries remain stable.
 
 ## 0.1.2 - 2026-07-07
 

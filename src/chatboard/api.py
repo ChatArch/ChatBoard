@@ -6,20 +6,33 @@ import os
 from pathlib import Path
 from typing import Any
 
-from fastapi import Body, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from chatboard import __version__
+from chatboard.auth import auth_enabled, auth_username, clear_session_cookie, request_is_authenticated, set_session_cookie, verify_credentials
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
+from chatboard.services import machines as machines_service
 from chatboard.services.cards import card_detail, card_file_content, card_file_list, card_files, ensure_card, find_card_path, move_card, update_card
 from chatboard.services.workspace import catalog as build_catalog
 from chatboard.services.workspace import column_page as build_column_page
 from chatboard.web.paths import package_static_dir
 
 app = FastAPI(title="ChatBoard API", version=__version__)
+
+_PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):  # type: ignore[no-untyped-def]
+    if not auth_enabled() or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
+        return await call_next(request)
+    if request.url.path.startswith("/api/"):
+        return JSONResponse({"detail": "authentication required"}, status_code=401)
+    return RedirectResponse("/login", status_code=303)
 
 
 def _root(root: str | None = None) -> Path:
@@ -29,6 +42,35 @@ def _root(root: str | None = None) -> Path:
 @app.get("/api/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "version": __version__}
+
+
+@app.get("/api/auth")
+def auth_status(request: Request) -> dict[str, Any]:
+    return {
+        "enabled": auth_enabled(),
+        "authenticated": request_is_authenticated(request),
+        "username_required": auth_username() is not None,
+    }
+
+
+@app.post("/api/login")
+def login(payload: dict[str, Any] = Body(...)) -> JSONResponse:
+    if not auth_enabled():
+        return JSONResponse({"ok": True, "auth": "disabled"})
+    username = str(payload.get("username") or payload.get("account") or "")
+    password = str(payload.get("password") or "")
+    if not verify_credentials(username, password):
+        raise HTTPException(401, "invalid credentials")
+    response = JSONResponse({"ok": True})
+    set_session_cookie(response)
+    return response
+
+
+@app.post("/api/logout")
+def logout() -> JSONResponse:
+    response = JSONResponse({"ok": True})
+    clear_session_cookie(response)
+    return response
 
 
 @app.get("/api/catalog")
@@ -47,6 +89,25 @@ def get_column(
     if column_key not in {"project", "discussion", "archive", "discard"}:
         raise HTTPException(404, f"column not found: {column_key}")
     return build_column_page(column_key, root=_root(root), ensure=ensure, offset=offset, limit=limit)
+
+
+@app.get("/api/machines")
+def machines(root: str | None = None) -> dict[str, Any]:
+    try:
+        return machines_service.list_machines(root=_root(root))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/machines/{machine_id}")
+def machine_detail(machine_id: str, root: str | None = None) -> dict[str, Any]:
+    try:
+        detail = machines_service.get_machine(machine_id, root=_root(root))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if detail is None:
+        raise HTTPException(404, f"machine not found: {machine_id}")
+    return detail
 
 
 @app.get("/api/cards/{card_id}")
@@ -230,3 +291,13 @@ def index() -> FileResponse:
     if not index_path.exists():
         raise HTTPException(404, "web static assets not found")
     return FileResponse(index_path)
+
+
+@app.get("/login")
+def login_page() -> Any:
+    if not auth_enabled():
+        return RedirectResponse("/", status_code=303)
+    login_path = _static_dir / "login.html"
+    if not login_path.exists():
+        raise HTTPException(404, "login page not found")
+    return FileResponse(login_path)

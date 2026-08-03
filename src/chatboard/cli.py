@@ -94,13 +94,25 @@ def main() -> None:
 @main.command()
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host to bind.")
 @click.option("--port", default=8000, show_default=True, type=int, help="Port to bind.")
+@click.option("--root", type=click.Path(path_type=Path), default=None, help="Workspace root. Defaults to ~/Playground.")
 @click.option("--reload", is_flag=True, help="Enable uvicorn reload.")
-def serve(host: str, port: int, reload: bool) -> None:
+@click.option("--username", default=None, help="Require this account name when login is enabled.")
+@click.option("--password", default=None, help="Enable login with this password. Prefer CHATBOARD_PASSWORD for shared environments.")
+@click.option("--password-file", type=click.Path(path_type=Path), default=None, help="Read login password from a file.")
+def serve(
+    host: str,
+    port: int,
+    root: Path | None,
+    reload: bool,
+    username: str | None,
+    password: str | None,
+    password_file: Path | None,
+) -> None:
     """Start the ChatBoard web UI."""
 
     from chatboard.web.serve import serve as _serve
 
-    _serve(host=host, port=port, reload=reload)
+    _serve(host=host, port=port, root=root, reload=reload, username=username, password=password, password_file=password_file)
 
 
 @main.group()

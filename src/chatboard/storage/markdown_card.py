@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from chatboard.models import ArchiveState, CardLinks, CardTimestamps, DiscussionState, ProjectCard
-from chatboard.paths import as_workspace_relative, resolve_workspace_root
+from chatboard.paths import as_workspace_relative, infer_workspace_date, resolve_workspace_root
 
 CARD_FILENAME = "card.md"
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)(.*)\Z", re.S)
@@ -162,6 +162,12 @@ def save_card(project_path: str | Path, card: ProjectCard) -> Path:
     lines.append(f"title: {_format_scalar(card.title)}")
     lines.append(f"area: {_format_scalar(_frontmatter_area(card.area))}")
     lines.append(f"stage: {_format_scalar(card.stage)}")
+    if card.description:
+        lines.append(f"description: {_format_scalar(card.description)}")
+    if card.summary:
+        lines.append(f"summary: {_format_scalar(card.summary)}")
+    if card.date:
+        lines.append(f"date: {_format_scalar(card.date)}")
     if card.priority:
         lines.append(f"priority: {card.priority}")
     if card.owner:
@@ -217,7 +223,9 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
         workspace_path=relative,
         area=area,  # type: ignore[arg-type]
         stage=str(metadata.get("stage") or ("review" if area == "discussion" else "development")),
+        description=str(metadata.get("description") or metadata.get("summary") or _summary_from_body(body)),
         summary=str(metadata.get("summary") or _summary_from_body(body)),
+        date=str(metadata.get("date") or infer_workspace_date(path, root_path) or "") or None,
         schema_version=str(metadata.get("schema") or metadata.get("schema_version") or "chatboard.project_card.v1"),
         priority=int(metadata.get("priority") or 0),
         owner=metadata.get("owner"),
