@@ -149,12 +149,15 @@ class BoardColumn:
         return {"key": self.key, "title": self.title, "cards": [card.to_dict() for card in self.cards]}
 
 
+ARCHIVING_STAGES = {"archive_ready", "complete", "postprocess"}
+
 DEFAULT_COLUMNS: list[tuple[str, str]] = [
-    ("project", "Project"),
-    ("discussion", "Discussion"),
-    ("archive", "Archive"),
-    ("discard", "Discard"),
+    ("thoughts", "想法"),
+    ("project", "进行中"),
+    ("archiving", "归档中"),
+    ("archive", "已归档"),
 ]
+VISIBLE_COLUMN_KEYS = {key for key, _title in DEFAULT_COLUMNS}
 
 
 def column_for(area: str, stage: str) -> str:
@@ -162,10 +165,12 @@ def column_for(area: str, stage: str) -> str:
         return "trash"
     if area == "discard" or stage == "discarded":
         return "discard"
-    if area == "archive":
+    if area == "archive" or stage == "archived":
         return "archive"
     if area == "discussion":
-        return "discussion"
+        return "thoughts"
+    if area == "projects" and stage in ARCHIVING_STAGES:
+        return "archiving"
     return "project"
 
 

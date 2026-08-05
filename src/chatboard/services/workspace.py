@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from chatboard.models import BoardColumn, DEFAULT_COLUMNS, ProjectCard, column_title
+from chatboard.models import BoardColumn, DEFAULT_COLUMNS, ProjectCard, VISIBLE_COLUMN_KEYS, column_title
 from chatboard.paths import DEFAULT_AREAS, WORKSPACE_SCAN_IGNORED_DIR_NAMES, area_path, is_ignored_dir, resolve_workspace_root
 from chatboard.services.cards import ensure_card, load_card
 
@@ -87,12 +87,12 @@ def scan(root: str | Path | None = None, ensure: bool = False) -> list[ProjectCa
 def _areas_for_column(column: str) -> tuple[str, ...]:
     if column == "project":
         return ("projects",)
-    if column == "discussion":
+    if column == "archiving":
+        return ("projects",)
+    if column == "thoughts":
         return ("discussion",)
     if column == "archive":
         return ("archive",)
-    if column == "discard":
-        return ("discard",)
     return DEFAULT_AREAS
 
 
@@ -131,7 +131,7 @@ def column_page(
 def catalog(root: str | Path | None = None, ensure: bool = False) -> dict:
     root_path = resolve_workspace_root(root)
     columns = {key: BoardColumn(key=key, title=title) for key, title in DEFAULT_COLUMNS}
-    cards = scan(root_path, ensure=ensure)
+    cards = [card for card in scan(root_path, ensure=ensure) if card.column in VISIBLE_COLUMN_KEYS]
     for card in cards:
         columns.setdefault(card.column, BoardColumn(key=card.column, title=column_title(card.column))).cards.append(card)
     tag_counts: dict[str, int] = {}

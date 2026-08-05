@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from chatboard import __version__
 from chatboard.auth import auth_enabled, auth_username, clear_session_cookie, request_is_authenticated, set_session_cookie, verify_credentials
+from chatboard.models import VISIBLE_COLUMN_KEYS
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
@@ -86,7 +87,7 @@ def get_column(
     offset: int = Query(0, ge=0),
     limit: int = Query(24, ge=1, le=100),
 ) -> dict[str, Any]:
-    if column_key not in {"project", "discussion", "archive", "discard"}:
+    if column_key not in VISIBLE_COLUMN_KEYS:
         raise HTTPException(404, f"column not found: {column_key}")
     return build_column_page(column_key, root=_root(root), ensure=ensure, offset=offset, limit=limit)
 

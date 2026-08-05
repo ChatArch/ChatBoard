@@ -110,7 +110,8 @@ def test_catalog_uses_workspace_from_chatenv(monkeypatch, tmp_path):
     payload = json.loads(result.output)
     assert payload["root"] == tmp_path.as_posix()
     assert payload["total_cards"] == 1
-    assert payload["columns"][0]["cards"][0]["title"] == "Demo CLI"
+    project_column = next(column for column in payload["columns"] if column["key"] == "project")
+    assert project_column["cards"][0]["title"] == "Demo CLI"
 
 
 def test_card_ensure_and_show_use_configured_workspace(monkeypatch, tmp_path):

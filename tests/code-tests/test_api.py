@@ -14,6 +14,29 @@ def _project(root: Path) -> None:
     (path / "progress.md").write_text("# Progress\n", encoding="utf-8")
 
 
+def _write_card(path: Path, *, title: str, area: str, stage: str) -> None:
+    path.mkdir(parents=True)
+    card_id = "-".join(path.parts[-3:]).replace("_", "-")
+    (path / "card.md").write_text(
+        f"""---
+schema: chatboard.project_card.v1
+id: {card_id}
+title: {title}
+area: {area}
+stage: {stage}
+date: 2026-08-05
+---
+
+# 摘要
+
+{title}
+""",
+        encoding="utf-8",
+    )
+    (path / "PRD.md").write_text(f"# {title}\n\nTask.\n", encoding="utf-8")
+    (path / "progress.md").write_text("# Progress\n", encoding="utf-8")
+
+
 def test_health_endpoint():
     client = TestClient(app)
 
@@ -31,7 +54,8 @@ def test_catalog_and_detail_endpoints(tmp_path):
 
     assert catalog.status_code == 200
     assert catalog.json()["total_cards"] == 1
-    first_card = catalog.json()["columns"][0]["cards"][0]
+    project_column = next(column for column in catalog.json()["columns"] if column["key"] == "project")
+    first_card = project_column["cards"][0]
     assert first_card["description"] == "API task."
     assert first_card["summary"] == "API task."
     assert first_card["date"] == f"{datetime.now().year}-07-07"
@@ -108,12 +132,44 @@ def test_ensure_endpoint_rejects_missing_project_directory(tmp_path):
     assert not missing.exists()
 
 
-def test_column_endpoint_paginates_cards(tmp_path):
+def test_catalog_uses_lifecycle_columns_and_hides_discard(tmp_path):
+    _write_card(tmp_path / "discussion/08-05-idea", title="Idea", area="discussion", stage="review")
+    _write_card(tmp_path / "projects/chatarch/08-05-active", title="Active", area="projects", stage="development")
+    _write_card(tmp_path / "projects/chatarch/08-05-done", title="Done", area="projects", stage="complete")
+    _write_card(tmp_path / "archive/2026-08-01/chatarch/07-01-old", title="Old", area="archive", stage="archived")
+    _write_card(tmp_path / "discard/chatarch/07-01-hidden", title="Hidden", area="discard", stage="discarded")
+    client = TestClient(app)
+
+    response = client.get("/api/catalog", params={"root": str(tmp_path)})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [(column["key"], column["title"]) for column in payload["columns"]] == [
+        ("thoughts", "想法"),
+        ("project", "进行中"),
+        ("archiving", "归档中"),
+        ("archive", "已归档"),
+    ]
+    cards_by_column = {column["key"]: [card["title"] for card in column["cards"]] for column in payload["columns"]}
+    assert cards_by_column == {
+        "thoughts": ["Idea"],
+        "project": ["Active"],
+        "archiving": ["Done"],
+        "archive": ["Old"],
+    }
+    assert payload["total_cards"] == 4
+    assert "discard" not in {column["key"] for column in payload["columns"]}
+    assert "Hidden" not in sum(cards_by_column.values(), [])
+
+
+def test_lifecycle_column_endpoint_paginates_and_rejects_discard(tmp_path):
     for index in range(3):
         path = tmp_path / f"projects/chatarch/07-07-demo-{index}"
         path.mkdir(parents=True)
         (path / "PRD.md").write_text(f"# Demo {index}\n\nAPI task.\n", encoding="utf-8")
         (path / "progress.md").write_text("# Progress\n", encoding="utf-8")
+    _write_card(tmp_path / "discussion/08-05-idea", title="Idea", area="discussion", stage="review")
+    _write_card(tmp_path / "projects/chatarch/08-05-done", title="Done", area="projects", stage="archive_ready")
     client = TestClient(app)
 
     first = client.get("/api/columns/project", params={"root": str(tmp_path), "limit": 2})
@@ -121,6 +177,7 @@ def test_column_endpoint_paginates_cards(tmp_path):
     assert first.status_code == 200
     payload = first.json()
     assert payload["key"] == "project"
+    assert payload["title"] == "进行中"
     assert len(payload["cards"]) == 2
     assert payload["has_more"] is True
     assert payload["next_offset"] == 2
@@ -129,6 +186,18 @@ def test_column_endpoint_paginates_cards(tmp_path):
     assert second.status_code == 200
     assert len(second.json()["cards"]) == 1
     assert second.json()["has_more"] is False
+
+    thoughts = client.get("/api/columns/thoughts", params={"root": str(tmp_path)})
+    archiving = client.get("/api/columns/archiving", params={"root": str(tmp_path)})
+    discard = client.get("/api/columns/discard", params={"root": str(tmp_path)})
+
+    assert thoughts.status_code == 200
+    assert thoughts.json()["title"] == "想法"
+    assert [card["title"] for card in thoughts.json()["cards"]] == ["Idea"]
+    assert archiving.status_code == 200
+    assert archiving.json()["title"] == "归档中"
+    assert [card["title"] for card in archiving.json()["cards"]] == ["Done"]
+    assert discard.status_code == 404
 
 
 def test_index_serves_static_page():
@@ -196,7 +265,30 @@ def test_auth_gate_supports_password_only(monkeypatch):
     assert "chatboard_session" in client.cookies
 
 
-def test_machines_endpoints_normalize_registry_fields(tmp_path):
+def test_machines_endpoints_default_to_empty_placeholder(tmp_path, monkeypatch):
+    monkeypatch.delenv("CHATBOARD_ENABLE_MACHINES", raising=False)
+    monkeypatch.delenv("CHATBOARD_MACHINES_ENABLED", raising=False)
+    registry = tmp_path / ".chatboard" / "machines.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        json.dumps({"schema": "chatboard.machines.v1", "machines": [{"id": "demo", "title": "Demo"}]}),
+        encoding="utf-8",
+    )
+    client = TestClient(app)
+
+    listing = client.get("/api/machines", params={"root": str(tmp_path)})
+    detail = client.get("/api/machines/demo", params={"root": str(tmp_path)})
+
+    assert listing.status_code == 200
+    assert listing.json()["enabled"] is False
+    assert listing.json()["machines"] == []
+    assert listing.json()["summary"]["total"] == 0
+    assert "暂未启用" in listing.json()["empty_message"]
+    assert detail.status_code == 404
+
+
+def test_machines_endpoints_normalize_registry_fields(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_ENABLE_MACHINES", "true")
     registry = tmp_path / ".chatboard" / "machines.json"
     registry.parent.mkdir()
     registry.write_text(

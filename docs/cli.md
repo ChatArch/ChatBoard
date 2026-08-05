@@ -237,23 +237,25 @@ chatbd project catalog
 Column 规则：
 
 ```text
-if area == trash or stage == trashed:      trash
-elif area == discard or stage == discarded: discard
-elif area == archive:                       archive
-elif area == discussion:                    discussion
-else:                                       project
+if area == trash or stage == trashed:          trash      # 底层状态，不在默认 UI 列中
+elif area == discard or stage == discarded:    discard    # 底层状态，不在默认 UI 列中
+elif area == archive or stage == archived:     archive    # 已归档
+elif area == discussion:                       thoughts   # 想法
+elif area == projects and stage in
+     {archive_ready, complete, postprocess}:   archiving  # 归档中
+else:                                          project    # 进行中
 ```
 
 默认 UI 列是：
 
 ```text
-Project
-Discussion
-Archive
-Discard
+想法
+进行中
+归档中
+已归档
 ```
 
-`trash` 不在默认列中，但仍可作为底层 card area 被识别。
+`discard` 和 `trash` 仍可作为底层 card area 被识别，但不在主看板列中展示。
 
 ## `project card ensure`
 
@@ -409,7 +411,13 @@ chatbd serve --password-file ~/.config/chatboard/password
 
 ## Machines 数据
 
-Machines 页面从 workspace 根目录的 `.chatboard/machines.json` 读取只读机器清单。机器清单属于本地部署数据，不应提交到 ChatBoard 源码仓库。最小格式如下：
+默认情况下，Machines 页面只显示空态，不读取或展示真实机器清单。需要显式启用时，设置：
+
+```bash
+CHATBOARD_ENABLE_MACHINES=true chatbd serve
+```
+
+启用后，Machines 页面从 workspace 根目录的 `.chatboard/machines.json` 读取只读机器清单。机器清单属于本地部署数据，不应提交到 ChatBoard 源码仓库。最小格式如下：
 
 ```json
 {
