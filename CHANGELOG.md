@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-08-05
+
 ### Added
 
 - Add an optional `chatbd serve` account/password login gate for the Web UI and workspace APIs.
