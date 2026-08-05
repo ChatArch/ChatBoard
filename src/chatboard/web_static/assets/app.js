@@ -1,8 +1,8 @@
 const COLUMN_DEFS = [
-  { key: 'project', title: 'Project' },
-  { key: 'discussion', title: 'Discussion' },
-  { key: 'archive', title: 'Archive' },
-  { key: 'discard', title: 'Discard' },
+  { key: 'thoughts', title: '想法' },
+  { key: 'project', title: '进行中' },
+  { key: 'archiving', title: '归档中' },
+  { key: 'archive', title: '已归档' },
 ];
 const PAGE_SIZE = 24;
 const state = { catalog: null, machines: null, activePage: 'projects', selected: null, fullscreen: false, fileExplorerShowAll: false };
@@ -190,7 +190,7 @@ function columnCardsHtml(column) {
   const cards = column.cards || [];
   const body = column.key === 'archive'
     ? archiveColumnCardsHtml(cards)
-    : ['project', 'discussion'].includes(column.key)
+    : ['thoughts', 'project', 'archiving'].includes(column.key)
       ? dateGroupedCardsHtml(cards)
       : `<div class="card-list">${cards.map(cardHtml).join('')}</div>`;
   return `${body}${columnFooterHtml(column)}`;
@@ -229,6 +229,18 @@ function statusClass(status) {
 
 function renderMachinesSummary() {
   const data = state.machines || {};
+  if (data.enabled === false) {
+    const message = data.empty_message || 'Machines 页面暂未启用，真实机器清单暂不展示。';
+    $('summary').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><span>Machines</span><strong>0</strong></div>
+        <div class="stat-card"><span>Status</span><strong>暂未启用</strong></div>
+      </div>
+      <div class="tag-strip"><span class="tag-chip muted">${esc(message)}</span></div>
+      <div class="root-line">${esc(data.root || state.catalog?.root || '')}</div>
+    `;
+    return;
+  }
   const summary = data.summary || {};
   const counts = summary.status_counts || {};
   const framework = data.selected_framework || {};
@@ -278,6 +290,10 @@ function renderMachines() {
   renderMachinesSummary();
   $('emptyColumns').innerHTML = '';
   $('board').className = 'board machines-board';
+  if (data.enabled === false) {
+    $('board').innerHTML = `<div class="empty-column-note">${esc(data.empty_message || 'Machines 页面暂未启用，真实机器清单暂不展示。')}</div>`;
+    return;
+  }
   if (!machines.length) {
     $('board').innerHTML = '<div class="empty-column-note">No machines registered yet.</div>';
     return;

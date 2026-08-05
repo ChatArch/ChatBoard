@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,29 @@ GROUP_TITLES = {
 
 def machines_registry_path(root: Path) -> Path:
     return root / ".chatboard" / "machines.json"
+
+
+def machines_enabled() -> bool:
+    value = os.environ.get("CHATBOARD_ENABLE_MACHINES") or os.environ.get("CHATBOARD_MACHINES_ENABLED") or ""
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _empty_placeholder(root: Path) -> dict[str, Any]:
+    return {
+        "enabled": False,
+        "root": str(root),
+        "registry_path": str(machines_registry_path(root)),
+        "selected_framework": {},
+        "summary": {
+            "total": 0,
+            "status_counts": {},
+            "group_counts": {},
+            "last_updated": None,
+        },
+        "groups": [],
+        "machines": [],
+        "empty_message": "Machines 页面暂未启用，真实机器清单暂不展示。",
+    }
 
 
 def _load_registry(root: Path) -> dict[str, Any]:
@@ -79,6 +103,9 @@ def _normalize_machine(machine: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_machines(root: Path) -> dict[str, Any]:
+    if not machines_enabled():
+        return _empty_placeholder(root)
+
     registry = _load_registry(root)
     raw_machines = registry.get("machines") or []
     if not isinstance(raw_machines, list):
@@ -99,6 +126,7 @@ def list_machines(root: Path) -> dict[str, Any]:
         groups.append({"key": group, "title": GROUP_TITLES.get(group, group.replace("-", " ").title()), "count": group_counts[group]})
 
     return {
+        "enabled": True,
         "root": str(root),
         "registry_path": str(machines_registry_path(root)),
         "selected_framework": registry.get("selected_framework") or {},

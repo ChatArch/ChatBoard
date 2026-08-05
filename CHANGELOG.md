@@ -2,11 +2,13 @@
 
 ## Unreleased
 
+## 0.1.3 - 2026-08-05
+
 ### Added
 
 - Add an optional `chatbd serve` account/password login gate for the Web UI and workspace APIs.
 - Add card date, description, summary, and date-grouped dashboard rendering.
-- Add a Machines page backed by workspace-local `.chatboard/machines.json` inventory data.
+- Add a Machines page backed by workspace-local `.chatboard/machines.json` inventory data when explicitly enabled.
 
 ### Changed
 
@@ -16,7 +18,8 @@
 - Remove low-frequency Discussion metadata, Archive readiness, and standalone Trash commands from the public CLI.
 - Use ChatStyle schemas and the shared `-i/-I` interaction contract for required management inputs.
 - Preflight move destinations before writing metadata so conflicts leave source Projects unchanged.
-- Sort paginated card columns before slicing so page boundaries remain stable.
+- Show the default Web board as a four-step lifecycle: `想法`、`进行中`、`归档中`、`已归档`; hide Discard from the main board projection.
+- Keep the Machines page as an empty placeholder unless `CHATBOARD_ENABLE_MACHINES=true` is set.
 
 ## 0.1.2 - 2026-07-07
 
