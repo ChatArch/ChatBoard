@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.4 - 2026-08-05
+
+### Fixed
+
+- Point documentation metadata, MkDocs canonical URL, and README docs badges to the enabled GitHub Pages custom domain.
+
 ## 0.1.3 - 2026-08-05
 
 ### Added

@@ -26,7 +26,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/ChatArch/ChatBoard"
 Repository = "https://github.com/ChatArch/ChatBoard"
-Documentation = "https://ChatArch.github.io/ChatBoard"
+Documentation = "https://arch.gh.wzhecnu.cn/ChatBoard/"
 
 [project.scripts]
 chatbd = "chatboard.cli:main"
