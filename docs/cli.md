@@ -4,22 +4,27 @@
 
 ## 命令树
 
+运行 `chatbd --tree` 会从实际 Click 注册树输出当前命令面。文档中的树应与该命令保持一致。
+
 ```text
-chatbd
-├── serve [--host HOST] [--port PORT] [--root PATH] [--reload] [--username TEXT] [--password TEXT | --password-file PATH]
-└── project
-    ├── scan
-    ├── catalog
-    ├── card
-    │   ├── ensure PROJECT_PATH
-    │   ├── show CARD_ID
-    │   └── move CARD_ID AREA [--stage STAGE] [--dry-run]
-    ├── discussion
-    │   ├── create TITLE [--slug SLUG]
-    │   └── add-item DISCUSSION_ID CARD_ID [--dry-run]
-    ├── archive
-    │   └── run CARD_ID [--dry-run]
-    └── discard CARD_ID --reason TEXT [--dry-run]
+chatbd  # Run the ChatBoard web app and Project management tools.
+├── --help  # Show this help message.
+├── --version  # Show the installed package version.
+├── --tree  # Print the registered command tree.
+├── serve [--host <HOST>] [--port <PORT>] [--root <ROOT>] [--reload] [--username <USERNAME>] [--password <PASSWORD>] [--password-file <PASSWORD-FILE>]  # Start the ChatBoard web UI.
+└── project  # Inspect and manage ChatArch workspace Projects.
+    ├── scan  # Scan the workspace and list Project cards without writing metadata.
+    ├── catalog  # Print the Project board catalog grouped by columns.
+    ├── card  # Inspect and move Project cards.
+    │   ├── ensure [<PROJECT-PATH>] [--interactive]  # Create card.md metadata for an existing Project if missing.
+    │   ├── show [<CARD-ID>] [--interactive]  # Show the detail projection for a Project card.
+    │   └── move [<CARD-ID>] [<AREA>] [--stage <STAGE>] [--dry-run] [--interactive]  # Move a Project card between workspace areas.
+    ├── discussion  # Create Discussion topics and add Project items.
+    │   ├── create [<TITLE>] [--slug <SLUG>] [--interactive]  # Create a project-like Discussion topic.
+    │   └── add-item [<DISCUSSION-ID>] [<CARD-ID>] [--dry-run] [--interactive]  # Move a Project card into a Discussion topic's Items directory.
+    ├── archive  # Archive completed Project cards.
+    │   └── run [<CARD-ID>] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
+    └── discard [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Move a Project card into the formal Discard area.
 ```
 
 ## 命令分层

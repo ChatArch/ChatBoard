@@ -13,4 +13,4 @@ pip install -e ".[docs]"
 mkdocs serve
 ```
 
-Chinese version: [index.md](index.md).
+Chinese version: https://arch.gh.wzhecnu.cn/ChatBoard/

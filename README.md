@@ -24,6 +24,7 @@ ChatBoard: ChatArch kanban board tooling package
 ```bash
 pip install -e ".[dev]"
 chatbd --help
+chatbd --tree
 chatbd --version
 chatbd project catalog
 python -m pytest -q
@@ -32,9 +33,9 @@ python -m build
 
 ## CLI 文档
 
-`chatbd` 是 ChatBoard 的辅助管理 CLI。Web UI 是主要产品形态；当前 CLI 只保留 Project 的只读投影、metadata maintenance 和规范化 lifecycle 操作。长期文档见 `docs/cli.md`：
+`chatbd` 是 ChatBoard 的辅助管理 CLI。Web UI 是主要产品形态；当前 CLI 只保留 Project 的只读投影、metadata maintenance 和规范化 lifecycle 操作。运行 `chatbd --tree` 可从真实 Click 注册树输出当前命令面。长期文档见 https://arch.gh.wzhecnu.cn/ChatBoard/cli/：
 
-- 命令树与命令副作用边界。
+- 命令树、`--tree` 回读和命令副作用边界。
 - `ensure` 创建 `card.md` 的推导规则。
 - area、stage、id、title、summary、tags、links 等 metadata 的符号逻辑。
 - Discussion、Archive、Discard 和底层 card move 的移动规则。

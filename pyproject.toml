@@ -10,9 +10,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = [
-    "click>=8.0",
-    "chatstyle>=0.1.0,<0.2.0",
-    "chatenv>=0.2.0,<0.3.0",
+    "click>=8.1,<9.0",
+    "chatstyle>=0.1.1,<0.2.0",
+    "chatenv>=0.2.3,<0.3.0",
     "fastapi>=0.100",
     "uvicorn>=0.20",
 ]
@@ -36,7 +36,7 @@ chatboard = "chatboard.config"
 
 [project.optional-dependencies]
 dev = ["build", "httpx", "pytest", "twine"]
-docs = ["mkdocs>=1.4.0", "mkdocs-material>=9.0.0", "mike>=2.0.0"]
+docs = ["mkdocs>=1.6,<2.0", "mkdocs-material>=9.5,<9.7", "mkdocs-static-i18n>=1.2,<2.0", "mike>=2.0,<3.0"]
 
 [tool.setuptools.dynamic]
 version = {attr = "chatboard.__version__"}

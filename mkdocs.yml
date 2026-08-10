@@ -1,10 +1,54 @@
 site_name: ChatBoard 文档
 site_url: https://arch.gh.wzhecnu.cn/ChatBoard/
 repo_url: https://github.com/ChatArch/ChatBoard
+repo_name: ChatArch/ChatBoard
+
 theme:
   name: material
   language: zh
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - content.code.copy
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: suffix
+      fallback_to_default: true
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: zh
+          default: true
+          name: 中文
+          build: true
+          site_name: ChatBoard 文档
+        - locale: en
+          name: English
+          build: true
+          site_name: ChatBoard Documentation
+          nav_translations:
+            首页: Home
+            CLI 文档: CLI Docs
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+
+extra:
+  alternate:
+    - name: 中文
+      link: /ChatBoard/
+      lang: zh
+    - name: English
+      link: /ChatBoard/en/
+      lang: en
+
 nav:
   - 首页: index.md
   - CLI 文档: cli.md
-  - English: index.en.md

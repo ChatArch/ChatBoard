@@ -13,4 +13,4 @@ pip install -e ".[docs]"
 mkdocs serve
 ```
 
-英文版见：[index.en.md](index.en.md)。
+英文版见：https://arch.gh.wzhecnu.cn/ChatBoard/en/
