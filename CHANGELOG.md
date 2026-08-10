@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.1.5 - 2026-08-10
+
+### Added
+
+- 新增顶层 `chatbd --tree`，从真实 Click 注册树输出命令树、参数签名和用途注释。
+
+### Changed
+
+- 补齐 `--tree`、中英文 CLI 文档和 README 回读说明。
+- 对齐 ChatArch 内部依赖窗口：`chatenv>=0.2.3,<0.3.0`、`chatstyle>=0.1.1,<0.2.0`。
+- 对齐 MkDocs/i18n 文档构建依赖和 Preview Docs 公网域名链接。
+
 ## 0.1.4 - 2026-08-05
 
 ### Fixed
