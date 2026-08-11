@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.6 - 2026-08-12
+
+### Changed
+
+- Keep `chatbd --tree` rooted at the public console command name even when invoked through `python -m chatboard.cli`.
+- Enable the MkDocs Material emoji renderer (`pymdownx.emoji` with Material `twemoji`/`to_svg`) for bilingual public docs.
+- Harden tag-driven PyPI publishing with package-version, default-branch, and PyPI exact-version guards.
+- Add CI smoke checks for installed `chatbd --version` and `chatbd --tree`, plus distribution metadata checks.
+
 ## 0.1.5 - 2026-08-10
 
 ### Added

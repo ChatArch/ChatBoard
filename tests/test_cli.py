@@ -60,3 +60,11 @@ def test_serve_help_exposes_optional_login_gate():
     assert "--username" in result.output
     assert "--password" in result.output
     assert "--password-file" in result.output
+
+
+def test_tree_root_uses_public_console_command_even_in_python_module_mode():
+    result = CliRunner().invoke(main, ["--tree"], prog_name="python -m chatboard.cli")
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines()[0] == "chatbd  # Run the ChatBoard web app and Project management tools."
+    assert "python -m chatboard.cli" not in result.output

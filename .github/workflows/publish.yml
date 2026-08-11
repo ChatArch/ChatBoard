@@ -4,7 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -45,7 +44,6 @@ jobs:
               print(f"tag=v{version}", file=output)
           PY
       - name: Check tag matches package version
-        if: github.event_name == 'push'
         env:
           RELEASE_TAG: ${{ steps.meta.outputs.tag }}
         run: |
@@ -53,8 +51,14 @@ jobs:
             echo "Tag ${GITHUB_REF_NAME} does not match package version ${RELEASE_TAG}."
             exit 1
           fi
+      - name: Check release commit is on default branch
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "Release commit ${GITHUB_SHA} is not reachable from origin/main."
+            exit 1
+          fi
       - name: Check PyPI version
-        id: pypi
         env:
           PACKAGE_NAME: "ChatBoard"
           PACKAGE_VERSION: ${{ steps.meta.outputs.version }}
@@ -68,27 +72,19 @@ jobs:
           package = os.environ["PACKAGE_NAME"]
           version = os.environ["PACKAGE_VERSION"]
           url = f"https://pypi.org/pypi/{urllib.parse.quote(package)}/{urllib.parse.quote(version)}/json"
-          exists = "false"
           try:
               urllib.request.urlopen(url, timeout=10)
           except urllib.error.HTTPError as exc:
-              if exc.code != 404:
-                  raise
-          else:
-              exists = "true"
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              print(f"exists={exists}", file=output)
+              if exc.code == 404:
+                  raise SystemExit(0)
+              raise
+          raise SystemExit(f"{package} {version} is already on PyPI")
           PY
-      - name: Stop when version is already on PyPI
-        if: steps.pypi.outputs.exists == 'true'
-        run: echo "ChatBoard ${{ steps.meta.outputs.version }} is already on PyPI; skipping publish."
-      - name: Build distribution
-        if: steps.pypi.outputs.exists == 'false'
-        run: |
-          python -m pip install --upgrade pip build twine
-          python -m build
-          python -m twine check dist/*
-      - name: Publish to PyPI
-        if: steps.pypi.outputs.exists == 'false'
+      - name: Install build tools
+        run: python -m pip install --upgrade pip build twine
+      - name: Build
+        run: python -m build
+      - name: Check dist
+        run: python -m twine check dist/*
+      - name: Publish to PyPI (OIDC)
         uses: pypa/gh-action-pypi-publish@release/v1
