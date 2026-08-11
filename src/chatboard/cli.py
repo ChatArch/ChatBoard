@@ -107,7 +107,7 @@ def _print_tree(ctx: click.Context, _param: click.Parameter, value: bool) -> Non
     command = ctx.command
     if not isinstance(command, click.Group):
         raise click.ClickException("Command tree is only available for command groups.")
-    click.echo(render_cli_tree(command, root_name=ctx.info_name or "chatbd"))
+    click.echo(render_cli_tree(command, root_name="chatbd"))
     ctx.exit()
 
 
