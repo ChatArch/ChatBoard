@@ -98,20 +98,7 @@ button.ghost { background: rgba(255,250,241,.72); color: var(--accent); }
 .badge.area { background: #d9ebe6; color: #184d43; }
 .badge.stage { background: #f0d9bd; color: #7b4818; }
 .badge.date { background: #e6edd7; color: #536022; }
-.badge.role { background: #d9ebe6; color: #184d43; }
 .badge.muted { background: rgba(255,255,255,.56); color: var(--muted); border: 1px solid var(--line); }
-.machines-board { grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
-.machine-group .card-list { grid-template-columns: 1fr; }
-.machine-card { min-height: 168px; }
-.machine-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-.machine-status { border-radius: 999px; padding: 4px 9px; font: 800 11px/1 ui-sans-serif, system-ui; text-transform: uppercase; letter-spacing: .06em; border: 1px solid transparent; }
-.machine-status.status-ok { background: #d9ebe6; color: #184d43; border-color: rgba(35, 105, 91, .18); }
-.machine-status.status-warning { background: #f0d9bd; color: #7b4818; border-color: rgba(199, 119, 43, .22); }
-.machine-status.status-unknown, .machine-status.status-stale { background: rgba(255,255,255,.58); color: var(--muted); border-color: var(--line); }
-.machine-status.status-offline { background: #f1ccc6; color: var(--danger); border-color: rgba(163, 58, 43, .22); }
-.machine-line { margin-top: 9px; color: #2f3731; font: 800 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-.machine-aliases { margin-top: 5px; color: var(--muted); font: 12px/1.4 ui-sans-serif, system-ui; }
-.machine-list { margin: 0; padding-left: 18px; color: var(--muted); font: 13px/1.6 ui-sans-serif, system-ui; }
 .modal { display: none; position: fixed; inset: 0; z-index: 50; }
 .modal.open { display: block; }
 .modal-backdrop { position: absolute; inset: 0; background: rgba(29, 33, 28, .42); backdrop-filter: blur(6px); }

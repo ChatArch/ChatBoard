@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Removed
+
+- Remove the duplicate Machines page, machine inventory API, and workspace-local `.chatboard/machines.json` integration from ChatBoard; machine status now belongs in ChatGlance.
+
 ## 0.1.6 - 2026-08-12
 
 ### Changed

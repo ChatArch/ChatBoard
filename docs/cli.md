@@ -414,31 +414,6 @@ chatbd serve --password-file ~/.config/chatboard/password
 
 通过 HTTPS 反向代理公开服务时，应启用 `CHATBOARD_COOKIE_SECURE`，并在反向代理层为登录接口配置请求限速。这个可选门禁用于小规模 ChatBoard 部署，不替代 SSO 或 MFA。
 
-## Machines 数据
-
-默认情况下，Machines 页面只显示空态，不读取或展示真实机器清单。需要显式启用时，设置：
-
-```bash
-CHATBOARD_ENABLE_MACHINES=true chatbd serve
-```
-
-启用后，Machines 页面从 workspace 根目录的 `.chatboard/machines.json` 读取只读机器清单。机器清单属于本地部署数据，不应提交到 ChatBoard 源码仓库。最小格式如下：
-
-```json
-{
-  "schema": "chatboard.machines.v1",
-  "machines": [
-    {
-      "id": "local-dev",
-      "title": "Local development machine",
-      "group": "local",
-      "status": "ok",
-      "roles": ["development"]
-    }
-  ]
-}
-```
-
 开发时可加：
 
 ```bash

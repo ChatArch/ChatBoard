@@ -16,7 +16,6 @@ from chatboard.models import VISIBLE_COLUMN_KEYS
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
-from chatboard.services import machines as machines_service
 from chatboard.services.cards import card_detail, card_file_content, card_file_list, card_files, ensure_card, find_card_path, move_card, update_card
 from chatboard.services.workspace import catalog as build_catalog
 from chatboard.services.workspace import column_page as build_column_page
@@ -91,24 +90,6 @@ def get_column(
         raise HTTPException(404, f"column not found: {column_key}")
     return build_column_page(column_key, root=_root(root), ensure=ensure, offset=offset, limit=limit)
 
-
-@app.get("/api/machines")
-def machines(root: str | None = None) -> dict[str, Any]:
-    try:
-        return machines_service.list_machines(root=_root(root))
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-
-
-@app.get("/api/machines/{machine_id}")
-def machine_detail(machine_id: str, root: str | None = None) -> dict[str, Any]:
-    try:
-        detail = machines_service.get_machine(machine_id, root=_root(root))
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    if detail is None:
-        raise HTTPException(404, f"machine not found: {machine_id}")
-    return detail
 
 
 @app.get("/api/cards/{card_id}")
