@@ -200,13 +200,15 @@ def test_lifecycle_column_endpoint_paginates_and_rejects_discard(tmp_path):
     assert discard.status_code == 404
 
 
-def test_index_serves_static_page():
+def test_index_serves_static_page_without_machines_tab():
     client = TestClient(app)
 
     response = client.get("/")
 
     assert response.status_code == 200
     assert "ChatBoard" in response.text
+    assert 'data-page-tab="machines"' not in response.text
+    assert ">Machines<" not in response.text
 
 
 def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
@@ -265,9 +267,8 @@ def test_auth_gate_supports_password_only(monkeypatch):
     assert "chatboard_session" in client.cookies
 
 
-def test_machines_endpoints_default_to_empty_placeholder(tmp_path, monkeypatch):
-    monkeypatch.delenv("CHATBOARD_ENABLE_MACHINES", raising=False)
-    monkeypatch.delenv("CHATBOARD_MACHINES_ENABLED", raising=False)
+def test_machines_endpoints_are_removed(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_ENABLE_MACHINES", "true")
     registry = tmp_path / ".chatboard" / "machines.json"
     registry.parent.mkdir()
     registry.write_text(
@@ -279,45 +280,5 @@ def test_machines_endpoints_default_to_empty_placeholder(tmp_path, monkeypatch):
     listing = client.get("/api/machines", params={"root": str(tmp_path)})
     detail = client.get("/api/machines/demo", params={"root": str(tmp_path)})
 
-    assert listing.status_code == 200
-    assert listing.json()["enabled"] is False
-    assert listing.json()["machines"] == []
-    assert listing.json()["summary"]["total"] == 0
-    assert "暂未启用" in listing.json()["empty_message"]
+    assert listing.status_code == 404
     assert detail.status_code == 404
-
-
-def test_machines_endpoints_normalize_registry_fields(tmp_path, monkeypatch):
-    monkeypatch.setenv("CHATBOARD_ENABLE_MACHINES", "true")
-    registry = tmp_path / ".chatboard" / "machines.json"
-    registry.parent.mkdir()
-    registry.write_text(
-        json.dumps(
-            {
-                "schema": "chatboard.machines.v1",
-                "machines": [
-                    {
-                        "id": "demo",
-                        "title": "Demo",
-                        "roles": "worker",
-                        "aliases": None,
-                        "evidence": "reports/demo.md",
-                        "tools": "invalid",
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
-    client = TestClient(app)
-
-    listing = client.get("/api/machines", params={"root": str(tmp_path)})
-    detail = client.get("/api/machines/demo", params={"root": str(tmp_path)})
-
-    assert listing.status_code == 200
-    machine = listing.json()["machines"][0]
-    assert machine["roles"] == ["worker"]
-    assert machine["aliases"] == []
-    assert machine["evidence"] == ["reports/demo.md"]
-    assert machine["tools"] == {}
-    assert detail.status_code == 200

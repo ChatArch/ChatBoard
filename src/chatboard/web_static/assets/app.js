@@ -5,7 +5,7 @@ const COLUMN_DEFS = [
   { key: 'archive', title: '已归档' },
 ];
 const PAGE_SIZE = 24;
-const state = { catalog: null, machines: null, activePage: 'projects', selected: null, fullscreen: false, fileExplorerShowAll: false };
+const state = { catalog: null, activePage: 'projects', selected: null, fullscreen: false, fileExplorerShowAll: false };
 
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -223,150 +223,6 @@ function renderCatalog() {
   });
 }
 
-function statusClass(status) {
-  return `status-${String(status || 'unknown').toLowerCase()}`;
-}
-
-function renderMachinesSummary() {
-  const data = state.machines || {};
-  if (data.enabled === false) {
-    const message = data.empty_message || 'Machines 页面暂未启用，真实机器清单暂不展示。';
-    $('summary').innerHTML = `
-      <div class="stats-grid">
-        <div class="stat-card"><span>Machines</span><strong>0</strong></div>
-        <div class="stat-card"><span>Status</span><strong>暂未启用</strong></div>
-      </div>
-      <div class="tag-strip"><span class="tag-chip muted">${esc(message)}</span></div>
-      <div class="root-line">${esc(data.root || state.catalog?.root || '')}</div>
-    `;
-    return;
-  }
-  const summary = data.summary || {};
-  const counts = summary.status_counts || {};
-  const framework = data.selected_framework || {};
-  $('summary').innerHTML = `
-    <div class="stats-grid">
-      <div class="stat-card"><span>Machines</span><strong>${esc(summary.total || 0)}</strong></div>
-      <div class="stat-card"><span>OK</span><strong>${esc(counts.ok || 0)}</strong></div>
-      <div class="stat-card"><span>Warning</span><strong>${esc(counts.warning || 0)}</strong></div>
-      <div class="stat-card"><span>Unknown</span><strong>${esc(counts.unknown || 0)}</strong></div>
-      <div class="stat-card"><span>Framework</span><strong>${esc(framework.name || 'Beszel')}</strong></div>
-    </div>
-    <div class="tag-strip">
-      <span class="tag-chip muted">Selected machine-status framework: <b>${esc(framework.name || 'Beszel')}</b></span>
-      <span class="tag-chip muted">Registered SSH machines first; agent install later.</span>
-    </div>
-    <div class="root-line">${esc(data.registry_path || 'Machine registry loading...')}</div>
-  `;
-}
-
-function machineCardHtml(machine) {
-  const roles = (machine.roles || []).slice(0, 4).map((role) => `<span class="badge role">${esc(role)}</span>`).join('');
-  const aliases = (machine.aliases || []).filter((item) => item !== machine.title).slice(0, 3).join(' · ');
-  const tools = machine.tools || {};
-  const toolBadges = ['beszel', 'cockpit', 'netdata', 'uptime', 'homepage']
-    .filter((key) => tools[key])
-    .map((key) => `<span class="badge asset">${esc(key)}</span>`)
-    .join('');
-  return `<article class="card machine-card" data-machine-id="${esc(machine.id)}">
-    <div class="machine-card-top">
-      <div class="card-title">${esc(machine.title)}</div>
-      <span class="machine-status ${esc(statusClass(machine.status))}">${esc(machine.status || 'unknown')}</span>
-    </div>
-    <div class="card-date">${esc(machine.zone || machine.group || 'unknown zone')}</div>
-    <div class="card-description">${esc(machine.summary || '')}</div>
-    <div class="machine-line">${esc(machine.host || 'local')} ${machine.port ? `:${esc(machine.port)}` : ''}</div>
-    ${aliases ? `<div class="machine-aliases">${esc(aliases)}</div>` : ''}
-    <div class="card-meta">
-      ${roles}
-      ${toolBadges || '<span class="badge muted">tools pending</span>'}
-    </div>
-  </article>`;
-}
-
-function renderMachines() {
-  const data = state.machines || { machines: [], groups: [] };
-  const machines = data.machines || [];
-  renderMachinesSummary();
-  $('emptyColumns').innerHTML = '';
-  $('board').className = 'board machines-board';
-  if (data.enabled === false) {
-    $('board').innerHTML = `<div class="empty-column-note">${esc(data.empty_message || 'Machines 页面暂未启用，真实机器清单暂不展示。')}</div>`;
-    return;
-  }
-  if (!machines.length) {
-    $('board').innerHTML = '<div class="empty-column-note">No machines registered yet.</div>';
-    return;
-  }
-  const grouped = {};
-  machines.forEach((machine) => {
-    const group = machine.group || machine.zone || 'unknown';
-    grouped[group] = grouped[group] || [];
-    grouped[group].push(machine);
-  });
-  const groupTitles = Object.fromEntries((data.groups || []).map((group) => [group.key, group.title]));
-  $('board').innerHTML = Object.keys(grouped).sort().map((group) => `
-    <section class="column machine-group" data-machine-group="${esc(group)}">
-      <div class="column-head"><span class="column-title">${esc(groupTitles[group] || group)}</span><span class="count">${grouped[group].length}</span></div>
-      <div class="card-list">${grouped[group].map(machineCardHtml).join('')}</div>
-    </section>
-  `).join('');
-  document.querySelectorAll('[data-machine-id]').forEach((node) => {
-    node.addEventListener('click', () => loadMachineDetail(node.dataset.machineId));
-  });
-}
-
-function machineSectionHtml(section) {
-  if (section.kind === 'kv') {
-    const rows = (section.data || []).map(([key, value]) => `<div>${esc(key)}</div><div>${esc(value ?? '—')}</div>`).join('');
-    return `<section class="section tab-panel ${esc(section.key)}" data-tab-panel="${esc(section.key)}"><h3>${esc(section.title)}</h3><div class="kv">${rows}</div></section>`;
-  }
-  if (section.kind === 'list') {
-    const rows = (section.data || []).map((item) => `<li>${esc(item)}</li>`).join('');
-    return `<section class="section tab-panel ${esc(section.key)}" data-tab-panel="${esc(section.key)}"><h3>${esc(section.title)}</h3><ul class="machine-list">${rows}</ul></section>`;
-  }
-  return sectionHtml(section);
-}
-
-function renderMachineDetail(detail) {
-  const sections = detail.sections || [];
-  const active = sections[0] && sections[0].key;
-  $('detailBody').innerHTML = `
-    <div class="detail-tabs">${sections.map((section, index) => `<button class="tab-button ${index === 0 ? 'active' : ''}" type="button" data-tab="${esc(section.key)}">${esc(section.title)}</button>`).join('')}</div>
-    <div class="tab-panels">${sections.map(machineSectionHtml).join('')}</div>
-  `;
-  document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === active));
-  document.querySelectorAll('.tab-button').forEach((button) => {
-    button.addEventListener('click', () => {
-      document.querySelectorAll('.tab-button').forEach((item) => item.classList.remove('active'));
-      document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.tabPanel === button.dataset.tab));
-      button.classList.add('active');
-    });
-  });
-}
-
-async function loadMachines() {
-  $('summary').innerHTML = '<div class="column-loading"><span></span> Loading machines...</div>';
-  $('board').className = 'board machines-board';
-  $('board').innerHTML = '';
-  state.machines = await api('/api/machines');
-  renderMachines();
-}
-
-async function loadMachineDetail(machineId) {
-  state.selected = machineId;
-  renderMachines();
-  openModal();
-  $('detailTitle').textContent = 'Loading...';
-  $('detailPath').textContent = machineId;
-  $('detailBody').innerHTML = '<div class="section"><h3>Loading</h3><div class="card-summary">Fetching machine detail...</div></div>';
-  const detail = await api(`/api/machines/${encodeURIComponent(machineId)}`);
-  const machine = detail.machine;
-  $('detailTitle').textContent = machine.title;
-  $('detailPath').textContent = `${machine.host || 'local'}${machine.port ? `:${machine.port}` : ''}`;
-  renderMachineDetail(detail);
-}
-
 function fileIcon(node) {
   if (node.type === 'directory') return '▸';
   const name = String(node.name || '').toLowerCase();
@@ -525,8 +381,7 @@ function closeModal() {
   $('detailModal').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('modal-open');
   state.selected = null;
-  if (state.activePage === 'machines' && state.machines) renderMachines();
-  else if (state.catalog) renderCatalog();
+  if (state.catalog) renderCatalog();
 }
 
 function setFullscreen(on) {
@@ -576,10 +431,6 @@ async function loadColumn(key, offset = 0) {
 
 async function refresh() {
   state.selected = null;
-  if (state.activePage === 'machines') {
-    await loadMachines();
-    return;
-  }
   state.catalog = emptyCatalog();
   renderCatalog();
   COLUMN_DEFS.forEach((column) => loadColumn(column.key, 0));

@@ -40,7 +40,7 @@ python -m build
 - area、stage、id、title、summary、tags、links 等 metadata 的符号逻辑。
 - Discussion、Archive、Discard 和底层 card move 的移动规则。
 - `chatbd serve` 的可选登录门禁：`--username`、`--password`、`--password-file`、`CHATBOARD_USERNAME` 和 `CHATBOARD_PASSWORD`。
-- Web 看板的 card 日期/描述/摘要展示，以及 workspace-local `.chatboard/machines.json` 驱动的 Machines 页面。
+- Web 看板的 card 日期/描述/摘要展示。
 
 ## 目录结构
 
