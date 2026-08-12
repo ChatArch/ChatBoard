@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10 CI
+    import tomli as tomllib
 
 from chatenv import EnvStore, TokenStore
 from chatenv.token_refreshers import TokenRefreshResult
