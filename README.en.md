@@ -40,6 +40,7 @@ python -m build
 - Metadata derivation for area, stage, id, title, summary, tags, and links.
 - Movement rules for Discussion, Archive, Discard, and low-level card moves.
 - Optional `chatbd serve` login gate via `--username`, `--password`, `--password-file`, `CHATBOARD_USERNAME`, and `CHATBOARD_PASSWORD`.
+- ChatEnv alignment: keep `CHATBOARD_SERVICE_URL`, `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`, and `CHATBOARD_API_KEY` as separate layers; API automation can use Bearer / `X-ChatBoard-Token`, while browser-login cookies can be refreshed into the runtime token store with `chatenv token refresh Chatboard <profile>`.
 - Card date/description/summary rendering.
 - A separate `Tasks` tab for `type: task` cards, kept out of the legacy Projects board projection.
 - Task-management CLI: `chatbd project task create/list/status/update/transition/delete` for task creation, status, updates, stage transitions, and soft-delete.

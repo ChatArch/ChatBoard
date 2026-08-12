@@ -11,7 +11,15 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from chatboard import __version__
-from chatboard.auth import auth_enabled, auth_username, clear_session_cookie, request_is_authenticated, set_session_cookie, verify_credentials
+from chatboard.auth import (
+    api_token_enabled,
+    auth_enabled,
+    auth_username,
+    clear_session_cookie,
+    request_is_authenticated,
+    set_session_cookie,
+    verify_credentials,
+)
 from chatboard.models import VISIBLE_COLUMN_KEYS
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
@@ -42,7 +50,8 @@ _PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):  # type: ignore[no-untyped-def]
-    if not auth_enabled() or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
+    auth_required = auth_enabled() or (api_token_enabled() and request.url.path.startswith("/api/"))
+    if not auth_required or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
         return await call_next(request)
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": "authentication required"}, status_code=401)
@@ -64,6 +73,7 @@ def auth_status(request: Request) -> dict[str, Any]:
         "enabled": auth_enabled(),
         "authenticated": request_is_authenticated(request),
         "username_required": auth_username() is not None,
+        "api_token_enabled": api_token_enabled(),
     }
 
 

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from chatboard.config import load_runtime_config
 from chatboard.paths import resolve_workspace_root
 
 
@@ -31,20 +32,27 @@ def serve(
     password: str | None = None,
     password_file: str | Path | None = None,
 ) -> None:
-    workspace_root = resolve_workspace_root(root)
+    runtime_config = load_runtime_config()
+    workspace_root = resolve_workspace_root(root or runtime_config["workspace_root"])
     if password and password_file:
         raise click.ClickException("use either --password or --password-file, not both")
-    login_password = _read_password_file(Path(password_file)) if password_file else password
+    login_password = _read_password_file(Path(password_file)) if password_file else password or runtime_config["password"]
+    login_username = username or runtime_config["username"]
     env = os.environ.copy()
     env["CHATBOARD_WORKSPACE_ROOT"] = str(workspace_root)
+    env["CHATBOARD_SERVICE_URL"] = runtime_config["service_url"]
     if login_password is not None:
         if not login_password:
             raise click.ClickException("login password cannot be empty")
         env["CHATBOARD_PASSWORD"] = login_password
-    if username is not None:
-        if not username:
+    if login_username is not None:
+        if not login_username:
             raise click.ClickException("login username cannot be empty")
-        env["CHATBOARD_USERNAME"] = username
+        env["CHATBOARD_USERNAME"] = login_username
+    if runtime_config["api_key"]:
+        env.setdefault("CHATBOARD_API_KEY", runtime_config["api_key"])
+    if runtime_config["auth_secret"]:
+        env.setdefault("CHATBOARD_AUTH_SECRET", runtime_config["auth_secret"])
     args = [
         sys.executable,
         "-m",

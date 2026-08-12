@@ -131,6 +131,43 @@ Important derived fields:
 | `tags` | Topic path segments between the area and item directory |
 | `links.feishu` | Feishu URLs found in `PRD.md` / `progress.md` |
 
+## ChatEnv and Access Tokens
+
+`chatbd serve` still supports direct login flags:
+
+```bash
+chatbd serve --username admin@example.com --password "[REDACTED]"
+chatbd serve --password-file ~/.config/chatboard/password
+```
+
+For shared ChatArch environments, prefer a ChatEnv profile so service address, workspace root, browser login credentials, and automation API token stay separated:
+
+```bash
+cat <<'EOF' | chatenv paste --profile ops --yes --stdin
+CHATBOARD_SERVICE_URL=https://board.public.wzhecnu.cn/
+CHATBOARD_WORKSPACE_ROOT=~/Playground
+CHATBOARD_USERNAME=admin@example.com
+CHATBOARD_PASSWORD='[REDACTED]'
+CHATBOARD_API_KEY='[REDACTED]'
+EOF
+chatenv use ops -t Chatboard
+chatbd serve
+```
+
+Access-control layers:
+
+- `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`: browser login. `POST /api/login` returns an `HttpOnly` session cookie.
+- `CHATBOARD_API_KEY`: non-browser automation for CLI runners and webhooks. Workspace APIs accept `Authorization: Bearer ...` or `X-ChatBoard-Token` without first creating a browser session.
+- Stable ChatEnv profiles live under `envs/Chatboard/<profile>.env`; runtime cookies/tokens live under `tokens/Chatboard/<profile>.json` via `chatenv token ...`. Do not commit or document raw token values.
+
+Refresh a browser-login cookie into ChatEnv's runtime token store:
+
+```bash
+chatenv token refresh Chatboard ops
+```
+
+Long-lived API tokens can be imported through ChatEnv's explicit JSON import flow, for example `{"api_key":"[REDACTED]"}`. ChatEnv status output only shows safe metadata, not token values.
+
 ## Boundaries
 
 - `scan`, `catalog`, and `card show` are read-only projections.

@@ -438,13 +438,13 @@ chatbd serve --host 127.0.0.1 --port 8000
 需要给 Web UI 和 API 加登录门禁时，启动时提供密码：
 
 ```bash
-chatbd serve --username admin@example.com --password "your-password"
+chatbd serve --username admin@example.com --password '[REDACTED]'
 ```
 
 更推荐用环境变量，避免密码进入 shell history：
 
 ```bash
-CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD="your-password" chatbd serve
+CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD='[REDACTED]' chatbd serve
 ```
 
 也可以从文件读取密码：
@@ -453,6 +453,34 @@ CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD="your-password" chatbd s
 chatbd serve --password-file ~/.config/chatboard/password
 ```
 
+ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码和自动化 API token 分开保存到 ChatEnv profile：
+
+```bash
+cat <<'EOF' | chatenv paste --profile ops --yes --stdin
+CHATBOARD_SERVICE_URL=https://board.public.wzhecnu.cn/
+CHATBOARD_WORKSPACE_ROOT=~/Playground
+CHATBOARD_USERNAME=admin@example.com
+CHATBOARD_PASSWORD='[REDACTED]'
+CHATBOARD_API_KEY='[REDACTED]'
+EOF
+chatenv use ops -t Chatboard
+chatbd serve
+```
+
+分层语义：
+
+- `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`：面向浏览器登录，`POST /api/login` 成功后写入 `HttpOnly` session cookie。
+- `CHATBOARD_API_KEY`：面向 CLI、runner、Webhook 等非浏览器自动化，可通过 `Authorization: Bearer ...` 或 `X-ChatBoard-Token` 调用 workspace API，不需要先拿浏览器 cookie。
+- ChatEnv 的稳定 profile 放在 `envs/Chatboard/<profile>.env`；运行态登录 cookie/token 应通过 `chatenv token ...` 放在 `tokens/Chatboard/<profile>.json`，不要把 token 明文写入文档或 commit。
+
+示例：刷新指定 profile 的浏览器登录 cookie 到 ChatEnv runtime token store：
+
+```bash
+chatenv token refresh Chatboard ops
+```
+
+如果只需要把长期 API token 作为运行态 token 管理，可以用 ChatEnv 的显式 import 流程导入 JSON，例如 `{"api_key":"[REDACTED]"}`；命令输出只显示安全 metadata，不回显 token 值。
+
 启用后：
 
 - 未登录访问 `/` 会跳转到 `/login`。
@@ -460,6 +488,7 @@ chatbd serve --password-file ~/.config/chatboard/password
 - `/api/health` 和 `/api/auth` 保持公开，方便健康检查和登录页判断状态。
 - 登录会写入 `HttpOnly` session cookie。
 - `POST /api/logout` 会清除 session cookie。
+- 已配置 `CHATBOARD_API_KEY` 时，workspace API 也接受 `Authorization: Bearer ...` 或 `X-ChatBoard-Token`；`/api/auth` 只返回 `api_token_enabled`，不会回显 token。
 
 可选环境变量：
 
@@ -467,6 +496,8 @@ chatbd serve --password-file ~/.config/chatboard/password
 | --- | --- |
 | `CHATBOARD_USERNAME` | 可选登录账号；设置后登录必须同时匹配账号和密码 |
 | `CHATBOARD_PASSWORD` | 启用登录并设置登录密码 |
+| `CHATBOARD_SERVICE_URL` | ChatEnv 中记录的 ChatBoard 服务基地址，供 token refresh / 外部调用使用 |
+| `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
 | `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |
 | `CHATBOARD_COOKIE_SECURE` | 为 `1/true/yes/on` 时设置 Secure cookie |

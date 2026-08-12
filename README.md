@@ -40,6 +40,7 @@ python -m build
 - area、stage、id、title、summary、tags、links 等 metadata 的符号逻辑。
 - Discussion、Archive、Discard 和底层 card move 的移动规则。
 - `chatbd serve` 的可选登录门禁：`--username`、`--password`、`--password-file`、`CHATBOARD_USERNAME` 和 `CHATBOARD_PASSWORD`。
+- ChatEnv 对齐：`CHATBOARD_SERVICE_URL`、`CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD` 和 `CHATBOARD_API_KEY` 分层管理；API 自动化可用 Bearer / `X-ChatBoard-Token`，登录 cookie 可通过 `chatenv token refresh Chatboard <profile>` 写入 runtime token store。
 - Web 看板的 card 日期/描述/摘要展示。
 - 新增独立 `Tasks` tab：`type: task` 的任务卡片与原有 Projects 看板分开展示。
 - 任务管理 CLI：`chatbd project task create/list/status/update/transition/delete`，覆盖创建、查看状态、更新、阶段迁移和软删除。

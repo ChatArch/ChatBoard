@@ -358,7 +358,12 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
 
     health = client.get("/api/health")
     assert health.status_code == 200
-    assert client.get("/api/auth").json() == {"enabled": True, "authenticated": False, "username_required": True}
+    assert client.get("/api/auth").json() == {
+        "enabled": True,
+        "authenticated": False,
+        "username_required": True,
+        "api_token_enabled": False,
+    }
 
     root = client.get("/", follow_redirects=False)
     assert root.status_code == 303
@@ -382,7 +387,12 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
     good_login = client.post("/api/login", json={"username": "admin", "password": "secret"})
     assert good_login.status_code == 200
     assert "chatboard_session" in client.cookies
-    assert client.get("/api/auth").json() == {"enabled": True, "authenticated": True, "username_required": True}
+    assert client.get("/api/auth").json() == {
+        "enabled": True,
+        "authenticated": True,
+        "username_required": True,
+        "api_token_enabled": False,
+    }
 
     catalog = client.get("/api/catalog", params={"root": str(tmp_path)})
     assert catalog.status_code == 200
@@ -404,6 +414,75 @@ def test_auth_gate_supports_password_only(monkeypatch):
 
     assert response.status_code == 200
     assert "chatboard_session" in client.cookies
+
+
+def test_auth_gate_accepts_api_token_without_login_cookie(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_USERNAME", "admin")
+    monkeypatch.setenv("CHATBOARD_PASSWORD", "secret")
+    monkeypatch.setenv("CHATBOARD_API_KEY", "opaque-api-token")
+    _project(tmp_path)
+    client = TestClient(app)
+
+    blocked = client.get("/api/catalog", params={"root": str(tmp_path)})
+    bearer = client.get(
+        "/api/catalog",
+        params={"root": str(tmp_path)},
+        headers={"Authorization": "Bearer opaque-api-token"},
+    )
+    header = client.get(
+        "/api/catalog",
+        params={"root": str(tmp_path)},
+        headers={"X-ChatBoard-Token": "opaque-api-token"},
+    )
+    wrong = client.get(
+        "/api/catalog",
+        params={"root": str(tmp_path)},
+        headers={"Authorization": "Bearer wrong"},
+    )
+
+    assert blocked.status_code == 401
+    assert bearer.status_code == 200
+    assert bearer.json()["total_cards"] == 1
+    assert header.status_code == 200
+    assert wrong.status_code == 401
+
+
+def test_auth_status_reports_token_without_exposing_secret(monkeypatch):
+    monkeypatch.setenv("CHATBOARD_PASSWORD", "secret")
+    monkeypatch.setenv("CHATBOARD_API_KEY", "opaque-api-token")
+    client = TestClient(app)
+
+    status = client.get("/api/auth")
+
+    assert status.status_code == 200
+    assert status.json() == {
+        "enabled": True,
+        "authenticated": False,
+        "username_required": False,
+        "api_token_enabled": True,
+    }
+    assert "opaque-api-token" not in status.text
+
+
+def test_api_token_only_gates_workspace_api_without_web_login(tmp_path, monkeypatch):
+    monkeypatch.delenv("CHATBOARD_USERNAME", raising=False)
+    monkeypatch.delenv("CHATBOARD_PASSWORD", raising=False)
+    monkeypatch.setenv("CHATBOARD_API_KEY", "opaque-api-token")
+    _project(tmp_path)
+    client = TestClient(app)
+
+    root = client.get("/", follow_redirects=False)
+    blocked = client.get("/api/catalog", params={"root": str(tmp_path)})
+    allowed = client.get(
+        "/api/catalog",
+        params={"root": str(tmp_path)},
+        headers={"Authorization": "Bearer opaque-api-token"},
+    )
+
+    assert root.status_code == 200
+    assert blocked.status_code == 401
+    assert allowed.status_code == 200
+    assert allowed.json()["total_cards"] == 1
 
 
 def test_machines_endpoints_are_removed(tmp_path, monkeypatch):
