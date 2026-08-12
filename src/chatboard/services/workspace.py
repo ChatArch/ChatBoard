@@ -43,7 +43,11 @@ def _iter_project_dirs(
                 name for name in dirnames
                 if name not in ignored_parts and not (name.startswith(".") and name != ".")
             )
-            if is_ignored_dir(path) or any(part in ignored_parts for part in path.parts):
+            try:
+                relative_parts = path.resolve().relative_to(root_path).parts
+            except ValueError:
+                relative_parts = path.parts
+            if is_ignored_dir(path) or any(part in ignored_parts for part in relative_parts):
                 continue
             if not include_nested and _is_discussion_item_dir(path, root_path):
                 dirnames[:] = []
@@ -80,6 +84,8 @@ def scan(root: str | Path | None = None, ensure: bool = False) -> list[ProjectCa
     cards: list[ProjectCard] = []
     for project_path in iter_project_dirs(root):
         card = ensure_card(project_path, root) if ensure else load_card(project_path, root)
+        if card.type == "task":
+            continue
         cards.append(card)
     return sorted(cards, key=_card_sort_key)
 
@@ -109,6 +115,8 @@ def column_page(
     matched_cards: list[ProjectCard] = []
     for project_path in _iter_project_dirs(root_path, areas=_areas_for_column(column)):
         card = ensure_card(project_path, root_path) if ensure else load_card(project_path, root_path)
+        if card.type == "task":
+            continue
         if card.column != column:
             continue
         matched_cards.append(card)

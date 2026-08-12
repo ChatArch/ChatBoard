@@ -15,6 +15,13 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 └── project  # Inspect and manage ChatArch workspace Projects.
     ├── scan  # Scan the workspace and list Project cards without writing metadata.
     ├── catalog  # Print the Project board catalog grouped by columns.
+    ├── task  # Manage Tasks shown on the Tasks board tab.
+    │   ├── create [<TITLE>] [--description <DESCRIPTION>] [--topic <TOPIC>] [--slug <SLUG>] [--source-platform <SOURCE-PLATFORM>] [--source-url <SOURCE-URL>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--next-action <NEXT-ACTION>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
+    │   ├── list  # Print the Tasks board grouped by task stages.
+    │   ├── status [<CARD-ID>] [--interactive]  # Show a Task card's current status and available transitions.
+    │   ├── update [<CARD-ID>] [--title <TITLE>] [--description <DESCRIPTION>] [--summary <SUMMARY>] [--next-action <NEXT-ACTION>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--interactive]  # Update Task metadata.
+    │   ├── transition [<CARD-ID>] [<TRANSITION>] [--reason <REASON>] [--need <NEED>] [--summary <SUMMARY>] [--stage <STAGE>] [--interactive]  # Move a Task card between task stages.
+    │   └── delete [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
     ├── card  # Inspect and move Project cards.
     │   ├── ensure [<PROJECT-PATH>] [--interactive]  # Create card.md metadata for an existing Project if missing.
     │   ├── show [<CARD-ID>] [--interactive]  # Show the detail projection for a Project card.
@@ -33,6 +40,7 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 | --- | --- | --- | --- |
 | Board runtime | `serve` | 启动 Web UI | 否 |
 | Read projection | `project scan`、`project catalog`、`project card show` | 读取 workspace 并输出 JSON | 否 |
+| Task management | `project task create/list/status/update/transition/delete` | 管理独立 Tasks tab 中的任务卡片 | `list/status` 否；其余是 |
 | Metadata maintenance | `project card ensure` | 为已有目录补齐 `card.md` | 是 |
 | Discussion workflow | `project discussion create/add-item` | 创建 Discussion 节点、迁入 review item | 是 |
 | Lifecycle workflow | `project archive run`、`project discard`、`project card move` | 移动 workspace item | 是 |
@@ -81,6 +89,51 @@ is_card_dir(path) :=
 
 默认扫描不会把 `discussion/<topic>/Items/<item>` 当作顶层 card 输出。它们会作为 discussion card 的 `nested_items` 展示。
 
+## Tasks tab 与任务管理
+
+Tasks tab 是独立任务看板，不替代原有 Projects tab：
+
+- `project scan`、`project catalog` 和 `/api/catalog` 继续只投影原有 Project card。
+- `type: task` 的卡片只出现在 Web `Tasks` tab、`GET /api/tasks` 和 `chatbd project task list`。
+- Task card 仍写入 workspace project skeleton，便于继续使用 `PRD.md`、`progress.md`、`reports/` 和 `card.md`。
+
+任务创建示例：
+
+```bash
+chatbd project task create "Board task CLI" \
+  --topic chatarch \
+  --slug 08-12-board-task-cli \
+  --description "Create and manage a task from CLI." \
+  --source-platform feishu \
+  --source-url https://example.feishu.cn/thread/cli \
+  --accept-mode accept \
+  --side-effect-level local_write \
+  --next-action "Accept from CLI." \
+  --tag board \
+  --tag cli
+```
+
+任务状态和阶段迁移：
+
+```bash
+chatbd project task list
+chatbd project task status CARD_ID
+chatbd project task update CARD_ID --next-action "Worker can start." --accept-mode auto
+chatbd project task transition CARD_ID accept --reason "ready"
+chatbd project task transition CARD_ID block --reason "needs examples" --need "choose three cards"
+chatbd project task transition CARD_ID move --stage review --reason "needs human check"
+chatbd project task delete CARD_ID --reason "example cleanup" --dry-run
+```
+
+Tasks tab 的阶段列为：
+
+```text
+Inbox -> Ready -> Running -> Blocked -> Review -> Done
+```
+
+其中 `Auto` 不是列，而是 task metadata：`accept_mode: accept | auto`。
+风险/副作用级别写入 `side_effect_level`，当前取值为：`read_only`、`local_write`、`external_write`、`infra`、`irreversible`。
+
 ## `card.md` 的角色
 
 `card.md` 是 ChatBoard 的 board metadata sidecar。它不是 workspace 基础协议的必需文件，但一旦存在，ChatBoard 会优先读取它。
@@ -96,6 +149,12 @@ area: project
 stage: development
 tags:
   - chatarch
+accept_mode: accept
+side_effect_level: local_write
+next_action: Review task status.
+source:
+  platform: feishu
+  url: https://example.feishu.cn/thread/...
 assets:
   prd: PRD.md
   progress: progress.md

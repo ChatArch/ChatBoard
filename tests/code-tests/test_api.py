@@ -132,6 +132,145 @@ def test_ensure_endpoint_rejects_missing_project_directory(tmp_path):
     assert not missing.exists()
 
 
+def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
+    client = TestClient(app)
+
+    pages = client.get("/api/pages", params={"root": str(tmp_path)})
+    assert pages.status_code == 200
+    assert [(page["key"], page["title"]) for page in pages.json()["pages"]] == [
+        ("projects", "Projects"),
+        ("tasks", "Tasks"),
+    ]
+
+    index = client.get("/")
+    assert index.status_code == 200
+    assert 'data-page-tab="projects"' in index.text
+    assert 'data-page-tab="tasks"' in index.text
+    assert 'data-page-tab="machines"' not in index.text
+
+
+def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path):
+    client = TestClient(app)
+
+    created = client.post(
+        "/api/tasks",
+        params={"root": str(tmp_path)},
+        json={
+            "title": "Board task API",
+            "description": "Create from REST and manage status.",
+            "topic": "chatarch",
+            "slug": "08-12-board-task-api",
+            "source_platform": "feishu",
+            "source_url": "https://example.feishu.cn/thread/api",
+            "accept_mode": "accept",
+            "side_effect_level": "local_write",
+            "next_action": "Accept the task.",
+            "tags": ["board", "api"],
+        },
+    )
+    assert created.status_code == 200
+    card = created.json()["card"]
+    assert card["id"] == "projects-chatarch-08-12-board-task-api"
+    assert card["type"] == "task"
+    assert card["stage"] == "inbox"
+    assert card["source"] == {"platform": "feishu", "url": "https://example.feishu.cn/thread/api"}
+    assert card["accept_mode"] == "accept"
+    assert card["side_effect_level"] == "local_write"
+    assert (tmp_path / "projects/chatarch/08-12-board-task-api/PRD.md").exists()
+
+    project_catalog = client.get("/api/catalog", params={"root": str(tmp_path)})
+    assert project_catalog.status_code == 200
+    assert project_catalog.json()["total_cards"] == 0
+
+    tasks = client.get("/api/tasks", params={"root": str(tmp_path)})
+    assert tasks.status_code == 200
+    assert [column["key"] for column in tasks.json()["columns"]] == ["inbox", "ready", "running", "blocked", "review", "done"]
+    inbox = next(column for column in tasks.json()["columns"] if column["key"] == "inbox")
+    assert [item["id"] for item in inbox["cards"]] == [card["id"]]
+
+    status = client.get(f"/api/tasks/{card['id']}/status", params={"root": str(tmp_path)})
+    assert status.status_code == 200
+    assert status.json()["stage"] == "inbox"
+    assert "accept" in status.json()["available_transitions"]
+
+    patched = client.patch(
+        f"/api/tasks/{card['id']}",
+        params={"root": str(tmp_path)},
+        json={"next_action": "Worker can start.", "accept_mode": "auto", "side_effect_level": "read_only"},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["next_action"] == "Worker can start."
+    assert patched.json()["accept_mode"] == "auto"
+
+    accepted = client.post(
+        f"/api/tasks/{card['id']}/transitions",
+        params={"root": str(tmp_path)},
+        json={"transition": "accept", "reason": "ready"},
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["card"]["stage"] == "ready"
+
+    moved = client.post(
+        f"/api/tasks/{card['id']}/transitions",
+        params={"root": str(tmp_path)},
+        json={"transition": "block", "reason": "needs examples", "need": "choose three cards"},
+    )
+    assert moved.status_code == 200
+    assert moved.json()["card"]["stage"] == "blocked"
+    assert moved.json()["card"]["next_action"] == "choose three cards"
+
+    deleted = client.request(
+        "DELETE",
+        f"/api/tasks/{card['id']}",
+        params={"root": str(tmp_path)},
+        json={"reason": "example cleanup"},
+    )
+    assert deleted.status_code == 200
+    assert deleted.json()["card"]["area"] == "discard"
+    assert deleted.json()["card"]["archive"]["reason"] == "example cleanup"
+
+    after_delete = client.get("/api/tasks", params={"root": str(tmp_path)})
+    assert after_delete.status_code == 200
+    assert after_delete.json()["total_cards"] == 0
+
+    deleted_status = client.get(f"/api/tasks/{card['id']}/status", params={"root": str(tmp_path)})
+    assert deleted_status.status_code == 404
+
+
+def test_task_api_does_not_mutate_legacy_project_cards(tmp_path):
+    client = TestClient(app)
+    _write_card(tmp_path / "projects/chatarch/08-12-legacy", title="Legacy", area="projects", stage="development")
+    card_id = "projects-chatarch-08-12-legacy"
+
+    patched = client.patch(
+        f"/api/tasks/{card_id}",
+        params={"root": str(tmp_path)},
+        json={"next_action": "should not land"},
+    )
+    transitioned = client.post(
+        f"/api/tasks/{card_id}/transitions",
+        params={"root": str(tmp_path)},
+        json={"transition": "accept", "reason": "should not land"},
+    )
+    deleted = client.request(
+        "DELETE",
+        f"/api/tasks/{card_id}",
+        params={"root": str(tmp_path)},
+        json={"reason": "should not land"},
+    )
+
+    assert patched.status_code == 404
+    assert transitioned.status_code == 404
+    assert deleted.status_code == 404
+
+    detail = client.get(f"/api/cards/{card_id}", params={"root": str(tmp_path)})
+    assert detail.status_code == 200
+    card = detail.json()["card"]
+    assert card["stage"] == "development"
+    assert card["area"] == "projects"
+    assert card["next_action"] is None
+
+
 def test_catalog_uses_lifecycle_columns_and_hides_discard(tmp_path):
     _write_card(tmp_path / "discussion/08-05-idea", title="Idea", area="discussion", stage="review")
     _write_card(tmp_path / "projects/chatarch/08-05-active", title="Active", area="projects", stage="development")

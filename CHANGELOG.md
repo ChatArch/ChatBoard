@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- Add a separate Tasks board tab and task card metadata (`type: task`, source, accept mode, side-effect level, and next action) without changing the legacy Projects board projection.
+- Add task-management REST APIs: `/api/pages`, `/api/tasks`, `/api/tasks/{id}/status`, `/api/tasks/{id}/transitions`, and task soft-delete.
+- Add `chatbd project task create/list/status/update/transition/delete` for task CRUD, status inspection, stage migration, and soft-delete.
+
+### Changed
+
+- Keep `project scan`, `project catalog`, and `/api/catalog` focused on legacy Project cards; task cards are listed through the new Tasks tab/API/CLI.
+
 ### Removed
 
 - Remove the duplicate Machines page, machine inventory API, and workspace-local `.chatboard/machines.json` integration from ChatBoard; machine status now belongs in ChatGlance.

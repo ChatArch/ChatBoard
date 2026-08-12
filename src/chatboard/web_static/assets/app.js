@@ -4,6 +4,14 @@ const COLUMN_DEFS = [
   { key: 'archiving', title: '归档中' },
   { key: 'archive', title: '已归档' },
 ];
+const TASK_COLUMN_DEFS = [
+  { key: 'inbox', title: 'Inbox' },
+  { key: 'ready', title: 'Ready' },
+  { key: 'running', title: 'Running' },
+  { key: 'blocked', title: 'Blocked' },
+  { key: 'review', title: 'Review' },
+  { key: 'done', title: 'Done' },
+];
 const PAGE_SIZE = 24;
 const state = { catalog: null, activePage: 'projects', selected: null, fullscreen: false, fileExplorerShowAll: false };
 
@@ -62,9 +70,10 @@ function setActivePage(page) {
 }
 
 function emptyCatalog() {
+  const definitions = state.activePage === 'tasks' ? TASK_COLUMN_DEFS : COLUMN_DEFS;
   return {
     root: '',
-    columns: COLUMN_DEFS.map((column) => ({
+    columns: definitions.map((column) => ({
       ...column,
       cards: [],
       loading: false,
@@ -429,10 +438,37 @@ async function loadColumn(key, offset = 0) {
   renderCatalog();
 }
 
+async function loadTasks() {
+  try {
+    const params = new URLSearchParams();
+    const data = await api(`/api/tasks?${params.toString()}`);
+    state.catalog = {
+      root: data.root || '',
+      columns: (data.columns || TASK_COLUMN_DEFS).map((column) => ({
+        ...column,
+        cards: column.cards || [],
+        loading: false,
+        loaded: true,
+        error: null,
+        has_more: false,
+        next_offset: (column.cards || []).length,
+      })),
+    };
+  } catch (err) {
+    state.catalog = emptyCatalog();
+    state.catalog.columns[0].error = err.message || String(err);
+  }
+  renderCatalog();
+}
+
 async function refresh() {
   state.selected = null;
   state.catalog = emptyCatalog();
   renderCatalog();
+  if (state.activePage === 'tasks') {
+    await loadTasks();
+    return;
+  }
   COLUMN_DEFS.forEach((column) => loadColumn(column.key, 0));
 }
 

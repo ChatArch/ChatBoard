@@ -15,6 +15,13 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 └── project  # Inspect and manage ChatArch workspace Projects.
     ├── scan  # Scan the workspace and list Project cards without writing metadata.
     ├── catalog  # Print the Project board catalog grouped by columns.
+    ├── task  # Manage Tasks shown on the Tasks board tab.
+    │   ├── create [<TITLE>] [--description <DESCRIPTION>] [--topic <TOPIC>] [--slug <SLUG>] [--source-platform <SOURCE-PLATFORM>] [--source-url <SOURCE-URL>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--next-action <NEXT-ACTION>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
+    │   ├── list  # Print the Tasks board grouped by task stages.
+    │   ├── status [<CARD-ID>] [--interactive]  # Show a Task card's current status and available transitions.
+    │   ├── update [<CARD-ID>] [--title <TITLE>] [--description <DESCRIPTION>] [--summary <SUMMARY>] [--next-action <NEXT-ACTION>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--interactive]  # Update Task metadata.
+    │   ├── transition [<CARD-ID>] [<TRANSITION>] [--reason <REASON>] [--need <NEED>] [--summary <SUMMARY>] [--stage <STAGE>] [--interactive]  # Move a Task card between task stages.
+    │   └── delete [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
     ├── card  # Inspect and move Project cards.
     │   ├── ensure [<PROJECT-PATH>] [--interactive]  # Create card.md metadata for an existing Project if missing.
     │   ├── show [<CARD-ID>] [--interactive]  # Show the detail projection for a Project card.
@@ -33,6 +40,7 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 | --- | --- | --- | --- |
 | Board runtime | `serve` | Start the Web UI | No |
 | Read projection | `project scan`, `project catalog`, `project card show` | Read workspace state and print JSON | No |
+| Task management | `project task create/list/status/update/transition/delete` | Manage task cards in the separate Tasks tab | `list/status` no; others yes |
 | Metadata maintenance | `project card ensure` | Create `card.md` for an existing directory | Yes |
 | Discussion workflow | `project discussion create/add-item` | Create Discussion nodes and move review items | Yes |
 | Lifecycle workflow | `project archive run`, `project discard`, `project card move` | Move workspace items | Yes |
@@ -59,6 +67,51 @@ discard/
 ```
 
 The trash area is stored under `.trash/chatboard/`. There is no standalone Trash CLI; use `chatbd project card move CARD_ID trash` when an explicit card move is needed.
+
+## Tasks Tab and Task Management
+
+The Tasks tab is a separate task board; it does not replace the legacy Projects tab:
+
+- `project scan`, `project catalog`, and `/api/catalog` continue to project legacy Project cards.
+- `type: task` cards appear in the Web `Tasks` tab, `GET /api/tasks`, and `chatbd project task list`.
+- Task cards still write a workspace project skeleton so `PRD.md`, `progress.md`, `reports/`, and `card.md` remain available.
+
+Create a task:
+
+```bash
+chatbd project task create "Board task CLI" \
+  --topic chatarch \
+  --slug 08-12-board-task-cli \
+  --description "Create and manage a task from CLI." \
+  --source-platform feishu \
+  --source-url https://example.feishu.cn/thread/cli \
+  --accept-mode accept \
+  --side-effect-level local_write \
+  --next-action "Accept from CLI." \
+  --tag board \
+  --tag cli
+```
+
+Inspect and move task stages:
+
+```bash
+chatbd project task list
+chatbd project task status CARD_ID
+chatbd project task update CARD_ID --next-action "Worker can start." --accept-mode auto
+chatbd project task transition CARD_ID accept --reason "ready"
+chatbd project task transition CARD_ID block --reason "needs examples" --need "choose three cards"
+chatbd project task transition CARD_ID move --stage review --reason "needs human check"
+chatbd project task delete CARD_ID --reason "example cleanup" --dry-run
+```
+
+Task columns are:
+
+```text
+Inbox -> Ready -> Running -> Blocked -> Review -> Done
+```
+
+`Auto` is not a column; it is task metadata: `accept_mode: accept | auto`.
+Side-effect risk is stored in `side_effect_level`: `read_only`, `local_write`, `external_write`, `infra`, or `irreversible`.
 
 ## Card Metadata
 

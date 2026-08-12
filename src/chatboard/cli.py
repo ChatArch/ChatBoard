@@ -18,7 +18,18 @@ from chatstyle import (
 from chatboard import __version__
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
-from chatboard.services.cards import card_detail, ensure_card, find_card_path, move_card
+from chatboard.services.cards import (
+    card_detail,
+    card_status,
+    create_task,
+    delete_card,
+    ensure_card,
+    find_card_path,
+    move_card,
+    task_catalog,
+    transition_card,
+    update_card,
+)
 from chatboard.services.workspace import catalog as build_catalog
 from chatboard.services.workspace import scan as scan_workspace
 
@@ -154,6 +165,27 @@ DISCARD_SCHEMA = CommandSchema(
         CommandField("reason", prompt="reason", required=True),
     ),
 )
+TASK_CREATE_SCHEMA = CommandSchema(
+    name="project-task-create",
+    fields=(CommandField("title", prompt="task title", required=True),),
+)
+TASK_CARD_SCHEMA = CommandSchema(
+    name="project-task-card",
+    fields=(CommandField("card_id", prompt="task card id", required=True),),
+)
+TASK_TRANSITION_SCHEMA = CommandSchema(
+    name="project-task-transition",
+    fields=(
+        CommandField("card_id", prompt="task card id", required=True),
+        CommandField(
+            "transition",
+            prompt="transition",
+            kind="select",
+            required=True,
+            choices=("accept", "start", "review", "block", "unblock", "done", "move"),
+        ),
+    ),
+)
 
 
 def _resolve(
@@ -229,6 +261,204 @@ def project_catalog() -> None:
     """Print the Project board catalog grouped by columns."""
 
     _json(build_catalog())
+
+
+@project.group("task")
+def project_task() -> None:
+    """Manage Tasks shown on the Tasks board tab."""
+
+
+@project_task.command("create")
+@click.argument("title", required=False)
+@click.option("--description", default="", help="Task body written to PRD.md.")
+@click.option("--topic", default="tasks", show_default=True, help="Topic folder under projects/.")
+@click.option("--slug", default=None, help="Project/task directory slug.")
+@click.option("--source-platform", default=None, help="Origin platform, e.g. feishu or mattermost.")
+@click.option("--source-url", default=None, help="Origin thread/message URL.")
+@click.option("--accept-mode", type=click.Choice(["accept", "auto"]), default="accept", show_default=True)
+@click.option(
+    "--side-effect-level",
+    type=click.Choice(["read_only", "local_write", "external_write", "infra", "irreversible"]),
+    default="local_write",
+    show_default=True,
+)
+@click.option("--next-action", default=None, help="Next action visible on the task card.")
+@click.option("--assignee", default=None, help="Task assignee.")
+@click.option("--tag", "tags", multiple=True, help="Task tag; can be repeated.")
+@click.option("--dry-run", is_flag=True, help="Show the card without writing files.")
+@add_interactive_option
+def project_task_create(
+    title: str | None,
+    description: str,
+    topic: str,
+    slug: str | None,
+    source_platform: str | None,
+    source_url: str | None,
+    accept_mode: str,
+    side_effect_level: str,
+    next_action: str | None,
+    assignee: str | None,
+    tags: tuple[str, ...],
+    dry_run: bool,
+    interactive: bool | None,
+) -> None:
+    """Create a Task card and task project skeleton."""
+
+    values = _resolve(
+        TASK_CREATE_SCHEMA,
+        {"title": title},
+        interactive,
+        "Usage: chatbd project task create [TITLE]",
+    )
+    try:
+        card = create_task(
+            values["title"],
+            description=description,
+            topic=topic,
+            slug=slug,
+            source_platform=source_platform,
+            source_url=source_url,
+            accept_mode=accept_mode,
+            side_effect_level=side_effect_level,
+            next_action=next_action,
+            assignee=assignee,
+            tags=list(tags),
+            dry_run=dry_run,
+        )
+        _json({"card": card.to_dict(), "dry_run": dry_run})
+    except (FileExistsError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+@project_task.command("list")
+def project_task_list() -> None:
+    """Print the Tasks board grouped by task stages."""
+
+    _json(task_catalog())
+
+
+@project_task.command("status")
+@click.argument("card_id", required=False)
+@add_interactive_option
+def project_task_status(card_id: str | None, interactive: bool | None) -> None:
+    """Show a Task card's current status and available transitions."""
+
+    values = _resolve(TASK_CARD_SCHEMA, {"card_id": card_id}, interactive, "Usage: chatbd project task status [CARD_ID]")
+    try:
+        status = card_status(values["card_id"])
+    except FileNotFoundError as exc:
+        raise click.ClickException(f"task not found: {values['card_id']}") from exc
+    if status.get("type") != "task":
+        raise click.ClickException(f"task not found: {values['card_id']}")
+    _json(status)
+
+
+@project_task.command("update")
+@click.argument("card_id", required=False)
+@click.option("--title", default=None, help="New task title.")
+@click.option("--description", default=None, help="New task description.")
+@click.option("--summary", default=None, help="New short summary.")
+@click.option("--next-action", default=None, help="New next action.")
+@click.option("--accept-mode", type=click.Choice(["accept", "auto"]), default=None)
+@click.option(
+    "--side-effect-level",
+    type=click.Choice(["read_only", "local_write", "external_write", "infra", "irreversible"]),
+    default=None,
+)
+@click.option("--assignee", default=None, help="New assignee.")
+@click.option("--tag", "tags", multiple=True, help="Replace tags when supplied; can be repeated.")
+@add_interactive_option
+def project_task_update(
+    card_id: str | None,
+    title: str | None,
+    description: str | None,
+    summary: str | None,
+    next_action: str | None,
+    accept_mode: str | None,
+    side_effect_level: str | None,
+    assignee: str | None,
+    tags: tuple[str, ...],
+    interactive: bool | None,
+) -> None:
+    """Update Task metadata."""
+
+    values = _resolve(TASK_CARD_SCHEMA, {"card_id": card_id}, interactive, "Usage: chatbd project task update [CARD_ID]")
+    patch: dict[str, Any] = {}
+    for key, value in {
+        "title": title,
+        "description": description,
+        "summary": summary,
+        "next_action": next_action,
+        "accept_mode": accept_mode,
+        "side_effect_level": side_effect_level,
+        "assignee": assignee,
+    }.items():
+        if value is not None:
+            patch[key] = value
+    if tags:
+        patch["tags"] = list(tags)
+    try:
+        card_status(values["card_id"])
+        card = update_card(values["card_id"], patch)
+    except (FileNotFoundError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    _json(card.to_dict())
+
+
+@project_task.command("transition")
+@click.argument("card_id", required=False)
+@click.argument("transition", required=False, type=click.Choice(["accept", "start", "review", "block", "unblock", "done", "move"]))
+@click.option("--reason", default=None, help="Decision or blocking reason.")
+@click.option("--need", default=None, help="Next action when blocking.")
+@click.option("--summary", default=None, help="Completion summary when marking done.")
+@click.option("--stage", default=None, help="Explicit target stage for move.")
+@add_interactive_option
+def project_task_transition(
+    card_id: str | None,
+    transition: str | None,
+    reason: str | None,
+    need: str | None,
+    summary: str | None,
+    stage: str | None,
+    interactive: bool | None,
+) -> None:
+    """Move a Task card between task stages."""
+
+    values = _resolve(
+        TASK_TRANSITION_SCHEMA,
+        {"card_id": card_id, "transition": transition},
+        interactive,
+        "Usage: chatbd project task transition [CARD_ID] [TRANSITION]",
+    )
+    try:
+        card = transition_card(
+            values["card_id"],
+            values["transition"],
+            reason=reason,
+            need=need,
+            summary=summary,
+            stage=stage,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    if card.type != "task":
+        raise click.ClickException(f"task not found: {values['card_id']}")
+    _json({"card": card.to_dict(), "available_transitions": card_status(values["card_id"])["available_transitions"]})
+
+
+@project_task.command("delete")
+@click.argument("card_id", required=False)
+@click.option("--reason", help="Why this Task is being soft-deleted.")
+@click.option("--dry-run", is_flag=True, help="Show the destination without moving files.")
+@add_interactive_option
+def project_task_delete(card_id: str | None, reason: str | None, dry_run: bool, interactive: bool | None) -> None:
+    """Soft-delete a Task card into the formal Discard area."""
+
+    values = _resolve(DISCARD_SCHEMA, {"card_id": card_id, "reason": reason}, interactive, "Usage: chatbd project task delete [CARD_ID] --reason TEXT")
+    try:
+        _json(delete_card(values["card_id"], reason=values["reason"], dry_run=dry_run))
+    except (FileNotFoundError, ValueError) as exc:
+        raise click.ClickException(str(exc)) from exc
 
 
 @project.group("card")

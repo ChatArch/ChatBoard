@@ -41,6 +41,8 @@ python -m build
 - Movement rules for Discussion, Archive, Discard, and low-level card moves.
 - Optional `chatbd serve` login gate via `--username`, `--password`, `--password-file`, `CHATBOARD_USERNAME`, and `CHATBOARD_PASSWORD`.
 - Card date/description/summary rendering.
+- A separate `Tasks` tab for `type: task` cards, kept out of the legacy Projects board projection.
+- Task-management CLI: `chatbd project task create/list/status/update/transition/delete` for task creation, status, updates, stage transitions, and soft-delete.
 
 ## Layout
 

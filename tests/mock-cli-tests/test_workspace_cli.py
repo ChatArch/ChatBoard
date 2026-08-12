@@ -23,14 +23,19 @@ def test_project_command_tree_is_scoped_and_minimal():
     runner = CliRunner()
 
     project_help = runner.invoke(main, ["project", "--help"])
+    task_help = runner.invoke(main, ["project", "task", "--help"])
     card_help = runner.invoke(main, ["project", "card", "--help"])
     discussion_help = runner.invoke(main, ["project", "discussion", "--help"])
     archive_help = runner.invoke(main, ["project", "archive", "--help"])
 
     assert project_help.exit_code == 0
-    for command in ("scan", "catalog", "card", "discussion", "archive", "discard"):
+    for command in ("scan", "catalog", "task", "card", "discussion", "archive", "discard"):
         assert command in project_help.output
     assert "trash" not in project_help.output
+
+    assert task_help.exit_code == 0
+    for command in ("create", "list", "status", "update", "transition", "delete"):
+        assert command in task_help.output
 
     assert card_help.exit_code == 0
     for command in ("ensure", "show", "move"):
@@ -145,3 +150,86 @@ def test_card_move_keeps_trash_as_explicit_low_level_target(monkeypatch, tmp_pat
     assert payload["area"] == "trash"
     assert payload["dry_run"] is True
     assert project.exists()
+
+
+def test_task_cli_create_status_transition_update_and_delete_use_configured_workspace(monkeypatch, tmp_path):
+    _configure_workspace(monkeypatch, tmp_path)
+    runner = CliRunner()
+
+    created = runner.invoke(
+        main,
+        [
+            "project",
+            "task",
+            "create",
+            "Board task CLI",
+            "--description",
+            "Create and manage a task from CLI.",
+            "--topic",
+            "chatarch",
+            "--slug",
+            "08-12-board-task-cli",
+            "--source-platform",
+            "feishu",
+            "--source-url",
+            "https://example.feishu.cn/thread/cli",
+            "--accept-mode",
+            "accept",
+            "--side-effect-level",
+            "local_write",
+            "--next-action",
+            "Accept from CLI.",
+            "--tag",
+            "board",
+            "--tag",
+            "cli",
+            "-I",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+    payload = json.loads(created.output)
+    card_id = payload["card"]["id"]
+    assert card_id == "projects-chatarch-08-12-board-task-cli"
+    assert payload["card"]["type"] == "task"
+    assert payload["card"]["stage"] == "inbox"
+
+    project_catalog = runner.invoke(main, ["project", "catalog"])
+    assert project_catalog.exit_code == 0
+    assert json.loads(project_catalog.output)["total_cards"] == 0
+
+    listed = runner.invoke(main, ["project", "task", "list"])
+    assert listed.exit_code == 0
+    listed_payload = json.loads(listed.output)
+    assert [column["key"] for column in listed_payload["columns"]] == ["inbox", "ready", "running", "blocked", "review", "done"]
+    assert listed_payload["total_cards"] == 1
+
+    status = runner.invoke(main, ["project", "task", "status", card_id, "-I"])
+    assert status.exit_code == 0
+    assert "accept" in json.loads(status.output)["available_transitions"]
+
+    updated = runner.invoke(
+        main,
+        [
+            "project",
+            "task",
+            "update",
+            card_id,
+            "--next-action",
+            "Worker can start from CLI.",
+            "--accept-mode",
+            "auto",
+            "--side-effect-level",
+            "read_only",
+            "-I",
+        ],
+    )
+    assert updated.exit_code == 0, updated.output
+    assert json.loads(updated.output)["next_action"] == "Worker can start from CLI."
+
+    accepted = runner.invoke(main, ["project", "task", "transition", card_id, "accept", "--reason", "ready", "-I"])
+    assert accepted.exit_code == 0, accepted.output
+    assert json.loads(accepted.output)["card"]["stage"] == "ready"
+
+    deleted = runner.invoke(main, ["project", "task", "delete", card_id, "--reason", "example cleanup", "-I"])
+    assert deleted.exit_code == 0, deleted.output
+    assert json.loads(deleted.output)["card"]["area"] == "discard"
