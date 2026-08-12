@@ -67,6 +67,16 @@ def test_nested_project_topic_dirs_are_individual_cards(tmp_path):
     assert cards[0].title == "Nested Project"
 
 
+def test_workspace_root_may_live_under_a_directory_named_playground(tmp_path):
+    root = tmp_path / "outer/playground/workspace"
+    _project(root, "projects/chatarch/07-07-demo", "Nested Under Playground")
+
+    cards = scan(root)
+
+    assert [card.id for card in cards] == ["projects-chatarch-07-07-demo"]
+    assert cards[0].title == "Nested Under Playground"
+
+
 def test_card_md_frontmatter_has_priority_over_inference(tmp_path):
     project = _project(tmp_path, "projects/chatarch/07-07-demo", "PRD Title")
     (project / "card.md").write_text(

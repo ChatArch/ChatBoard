@@ -11,12 +11,34 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from chatboard import __version__
-from chatboard.auth import auth_enabled, auth_username, clear_session_cookie, request_is_authenticated, set_session_cookie, verify_credentials
+from chatboard.auth import (
+    api_token_enabled,
+    auth_enabled,
+    auth_username,
+    clear_session_cookie,
+    request_is_authenticated,
+    set_session_cookie,
+    verify_credentials,
+)
 from chatboard.models import VISIBLE_COLUMN_KEYS
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
 from chatboard.services import discussion as discussion_service
-from chatboard.services.cards import card_detail, card_file_content, card_file_list, card_files, ensure_card, find_card_path, move_card, update_card
+from chatboard.services.cards import (
+    card_detail,
+    card_file_content,
+    card_file_list,
+    card_files,
+    card_status,
+    create_task,
+    delete_card,
+    ensure_card,
+    find_card_path,
+    move_card,
+    task_catalog,
+    transition_card,
+    update_card,
+)
 from chatboard.services.workspace import catalog as build_catalog
 from chatboard.services.workspace import column_page as build_column_page
 from chatboard.web.paths import package_static_dir
@@ -28,7 +50,8 @@ _PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):  # type: ignore[no-untyped-def]
-    if not auth_enabled() or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
+    auth_required = auth_enabled() or (api_token_enabled() and request.url.path.startswith("/api/"))
+    if not auth_required or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
         return await call_next(request)
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": "authentication required"}, status_code=401)
@@ -50,6 +73,7 @@ def auth_status(request: Request) -> dict[str, Any]:
         "enabled": auth_enabled(),
         "authenticated": request_is_authenticated(request),
         "username_required": auth_username() is not None,
+        "api_token_enabled": api_token_enabled(),
     }
 
 
@@ -76,6 +100,111 @@ def logout() -> JSONResponse:
 @app.get("/api/catalog")
 def catalog(root: str | None = None, ensure: bool = Query(False)) -> dict[str, Any]:
     return build_catalog(root=_root(root), ensure=ensure)
+
+
+@app.get("/api/pages")
+def pages(root: str | None = None) -> dict[str, Any]:
+    return {
+        "root": _root(root).as_posix(),
+        "pages": [
+            {"key": "projects", "title": "Projects", "endpoint": "/api/catalog"},
+            {"key": "tasks", "title": "Tasks", "endpoint": "/api/tasks"},
+        ],
+    }
+
+
+@app.get("/api/tasks")
+def tasks(root: str | None = None, ensure: bool = Query(False)) -> dict[str, Any]:
+    return task_catalog(root=_root(root), ensure=ensure)
+
+
+@app.post("/api/tasks")
+def create_task_api(payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        raise HTTPException(400, "title is required")
+    try:
+        card = create_task(
+            title=title,
+            description=str(payload.get("description") or payload.get("summary") or ""),
+            root=_root(root),
+            topic=str(payload.get("topic") or "tasks"),
+            slug=payload.get("slug"),
+            source_platform=payload.get("source_platform"),
+            source_url=payload.get("source_url"),
+            accept_mode=payload.get("accept_mode"),
+            side_effect_level=payload.get("side_effect_level"),
+            next_action=payload.get("next_action"),
+            assignee=payload.get("assignee"),
+            tags=list(payload.get("tags") or []),
+            dry_run=bool(payload.get("dry_run", False)),
+        )
+        return {"card": card.to_dict()}
+    except FileExistsError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/tasks/{card_id}/status")
+def get_task_status(card_id: str, root: str | None = None) -> dict[str, Any]:
+    try:
+        status = card_status(card_id, root=_root(root))
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"task not found: {card_id}") from exc
+    if status.get("type") != "task":
+        raise HTTPException(404, f"task not found: {card_id}")
+    return status
+
+
+@app.patch("/api/tasks/{card_id}")
+def patch_task(card_id: str, payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    root_path = _root(root)
+    try:
+        card_status(card_id, root=root_path)
+        card = update_card(card_id, payload, root=root_path)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"task not found: {card_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return card.to_dict()
+
+
+@app.post("/api/tasks/{card_id}/transitions")
+def transition_task(card_id: str, payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    transition = str(payload.get("transition") or "").strip()
+    if not transition:
+        raise HTTPException(400, "transition is required")
+    try:
+        card = transition_card(
+            card_id,
+            transition,
+            reason=payload.get("reason"),
+            need=payload.get("need"),
+            summary=payload.get("summary"),
+            stage=payload.get("stage"),
+            root=_root(root),
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"task not found: {card_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if card.type != "task":
+        raise HTTPException(404, f"task not found: {card_id}")
+    return {"card": card.to_dict(), "available_transitions": card_status(card_id, root=_root(root))["available_transitions"]}
+
+
+@app.delete("/api/tasks/{card_id}")
+def delete_task(card_id: str, payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    reason = str(payload.get("reason") or "").strip()
+    if not reason:
+        raise HTTPException(400, "reason is required")
+    try:
+        return delete_card(card_id, reason=reason, root=_root(root), dry_run=bool(payload.get("dry_run", False)))
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"task not found: {card_id}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/api/columns/{column_key}")

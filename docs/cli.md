@@ -15,6 +15,13 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 └── project  # Inspect and manage ChatArch workspace Projects.
     ├── scan  # Scan the workspace and list Project cards without writing metadata.
     ├── catalog  # Print the Project board catalog grouped by columns.
+    ├── task  # Manage Tasks shown on the Tasks board tab.
+    │   ├── create [<TITLE>] [--description <DESCRIPTION>] [--topic <TOPIC>] [--slug <SLUG>] [--source-platform <SOURCE-PLATFORM>] [--source-url <SOURCE-URL>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--next-action <NEXT-ACTION>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
+    │   ├── list  # Print the Tasks board grouped by task stages.
+    │   ├── status [<CARD-ID>] [--interactive]  # Show a Task card's current status and available transitions.
+    │   ├── update [<CARD-ID>] [--title <TITLE>] [--description <DESCRIPTION>] [--summary <SUMMARY>] [--next-action <NEXT-ACTION>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--interactive]  # Update Task metadata.
+    │   ├── transition [<CARD-ID>] [<TRANSITION>] [--reason <REASON>] [--need <NEED>] [--summary <SUMMARY>] [--stage <STAGE>] [--interactive]  # Move a Task card between task stages.
+    │   └── delete [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
     ├── card  # Inspect and move Project cards.
     │   ├── ensure [<PROJECT-PATH>] [--interactive]  # Create card.md metadata for an existing Project if missing.
     │   ├── show [<CARD-ID>] [--interactive]  # Show the detail projection for a Project card.
@@ -33,6 +40,7 @@ chatbd  # Run the ChatBoard web app and Project management tools.
 | --- | --- | --- | --- |
 | Board runtime | `serve` | 启动 Web UI | 否 |
 | Read projection | `project scan`、`project catalog`、`project card show` | 读取 workspace 并输出 JSON | 否 |
+| Task management | `project task create/list/status/update/transition/delete` | 管理独立 Tasks tab 中的任务卡片 | `list/status` 否；其余是 |
 | Metadata maintenance | `project card ensure` | 为已有目录补齐 `card.md` | 是 |
 | Discussion workflow | `project discussion create/add-item` | 创建 Discussion 节点、迁入 review item | 是 |
 | Lifecycle workflow | `project archive run`、`project discard`、`project card move` | 移动 workspace item | 是 |
@@ -81,6 +89,51 @@ is_card_dir(path) :=
 
 默认扫描不会把 `discussion/<topic>/Items/<item>` 当作顶层 card 输出。它们会作为 discussion card 的 `nested_items` 展示。
 
+## Tasks tab 与任务管理
+
+Tasks tab 是独立任务看板，不替代原有 Projects tab：
+
+- `project scan`、`project catalog` 和 `/api/catalog` 继续只投影原有 Project card。
+- `type: task` 的卡片只出现在 Web `Tasks` tab、`GET /api/tasks` 和 `chatbd project task list`。
+- Task card 仍写入 workspace project skeleton，便于继续使用 `PRD.md`、`progress.md`、`reports/` 和 `card.md`。
+
+任务创建示例：
+
+```bash
+chatbd project task create "Board task CLI" \
+  --topic chatarch \
+  --slug 08-12-board-task-cli \
+  --description "Create and manage a task from CLI." \
+  --source-platform feishu \
+  --source-url https://example.feishu.cn/thread/cli \
+  --accept-mode accept \
+  --side-effect-level local_write \
+  --next-action "Accept from CLI." \
+  --tag board \
+  --tag cli
+```
+
+任务状态和阶段迁移：
+
+```bash
+chatbd project task list
+chatbd project task status CARD_ID
+chatbd project task update CARD_ID --next-action "Worker can start." --accept-mode auto
+chatbd project task transition CARD_ID accept --reason "ready"
+chatbd project task transition CARD_ID block --reason "needs examples" --need "choose three cards"
+chatbd project task transition CARD_ID move --stage review --reason "needs human check"
+chatbd project task delete CARD_ID --reason "example cleanup" --dry-run
+```
+
+Tasks tab 的阶段列为：
+
+```text
+Inbox -> Ready -> Running -> Blocked -> Review -> Done
+```
+
+其中 `Auto` 不是列，而是 task metadata：`accept_mode: accept | auto`。
+风险/副作用级别写入 `side_effect_level`，当前取值为：`read_only`、`local_write`、`external_write`、`infra`、`irreversible`。
+
 ## `card.md` 的角色
 
 `card.md` 是 ChatBoard 的 board metadata sidecar。它不是 workspace 基础协议的必需文件，但一旦存在，ChatBoard 会优先读取它。
@@ -96,6 +149,12 @@ area: project
 stage: development
 tags:
   - chatarch
+accept_mode: accept
+side_effect_level: local_write
+next_action: Review task status.
+source:
+  platform: feishu
+  url: https://example.feishu.cn/thread/...
 assets:
   prd: PRD.md
   progress: progress.md
@@ -379,13 +438,13 @@ chatbd serve --host 127.0.0.1 --port 8000
 需要给 Web UI 和 API 加登录门禁时，启动时提供密码：
 
 ```bash
-chatbd serve --username admin@example.com --password "your-password"
+chatbd serve --username admin@example.com --password '[REDACTED]'
 ```
 
 更推荐用环境变量，避免密码进入 shell history：
 
 ```bash
-CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD="your-password" chatbd serve
+CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD='[REDACTED]' chatbd serve
 ```
 
 也可以从文件读取密码：
@@ -394,6 +453,34 @@ CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD="your-password" chatbd s
 chatbd serve --password-file ~/.config/chatboard/password
 ```
 
+ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码和自动化 API token 分开保存到 ChatEnv profile：
+
+```bash
+cat <<'EOF' | chatenv paste --profile ops --yes --stdin
+CHATBOARD_SERVICE_URL=https://board.public.wzhecnu.cn/
+CHATBOARD_WORKSPACE_ROOT=~/Playground
+CHATBOARD_USERNAME=admin@example.com
+CHATBOARD_PASSWORD='[REDACTED]'
+CHATBOARD_API_KEY='[REDACTED]'
+EOF
+chatenv use ops -t Chatboard
+chatbd serve
+```
+
+分层语义：
+
+- `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`：面向浏览器登录，`POST /api/login` 成功后写入 `HttpOnly` session cookie。
+- `CHATBOARD_API_KEY`：面向 CLI、runner、Webhook 等非浏览器自动化，可通过 `Authorization: Bearer ...` 或 `X-ChatBoard-Token` 调用 workspace API，不需要先拿浏览器 cookie。
+- ChatEnv 的稳定 profile 放在 `envs/Chatboard/<profile>.env`；运行态登录 cookie/token 应通过 `chatenv token ...` 放在 `tokens/Chatboard/<profile>.json`，不要把 token 明文写入文档或 commit。
+
+示例：刷新指定 profile 的浏览器登录 cookie 到 ChatEnv runtime token store：
+
+```bash
+chatenv token refresh Chatboard ops
+```
+
+如果只需要把长期 API token 作为运行态 token 管理，可以用 ChatEnv 的显式 import 流程导入 JSON，例如 `{"api_key":"[REDACTED]"}`；命令输出只显示安全 metadata，不回显 token 值。
+
 启用后：
 
 - 未登录访问 `/` 会跳转到 `/login`。
@@ -401,6 +488,7 @@ chatbd serve --password-file ~/.config/chatboard/password
 - `/api/health` 和 `/api/auth` 保持公开，方便健康检查和登录页判断状态。
 - 登录会写入 `HttpOnly` session cookie。
 - `POST /api/logout` 会清除 session cookie。
+- 已配置 `CHATBOARD_API_KEY` 时，workspace API 也接受 `Authorization: Bearer ...` 或 `X-ChatBoard-Token`；`/api/auth` 只返回 `api_token_enabled`，不会回显 token。
 
 可选环境变量：
 
@@ -408,6 +496,8 @@ chatbd serve --password-file ~/.config/chatboard/password
 | --- | --- |
 | `CHATBOARD_USERNAME` | 可选登录账号；设置后登录必须同时匹配账号和密码 |
 | `CHATBOARD_PASSWORD` | 启用登录并设置登录密码 |
+| `CHATBOARD_SERVICE_URL` | ChatEnv 中记录的 ChatBoard 服务基地址，供 token refresh / 外部调用使用 |
+| `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
 | `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |
 | `CHATBOARD_COOKIE_SECURE` | 为 `1/true/yes/on` 时设置 Secure cookie |

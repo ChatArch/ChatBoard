@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from chatboard.models import ArchiveState, CardLinks, CardTimestamps, DiscussionState, ProjectCard
+from chatboard.models import ArchiveState, CardLinks, CardSource, CardTimestamps, DiscussionState, ProjectCard
 from chatboard.paths import as_workspace_relative, infer_workspace_date, resolve_workspace_root
 
 CARD_FILENAME = "card.md"
@@ -160,6 +160,8 @@ def save_card(project_path: str | Path, card: ProjectCard) -> Path:
     lines.append(f"schema: {_format_scalar(card.schema_version)}")
     lines.append(f"id: {_format_scalar(card.id)}")
     lines.append(f"title: {_format_scalar(card.title)}")
+    if card.type != "project":
+        lines.append(f"type: {_format_scalar(card.type)}")
     lines.append(f"area: {_format_scalar(_frontmatter_area(card.area))}")
     lines.append(f"stage: {_format_scalar(card.stage)}")
     if card.description:
@@ -174,6 +176,12 @@ def save_card(project_path: str | Path, card: ProjectCard) -> Path:
         lines.append(f"owner: {_format_scalar(card.owner)}")
     if card.assignee:
         lines.append(f"assignee: {_format_scalar(card.assignee)}")
+    if card.accept_mode:
+        lines.append(f"accept_mode: {_format_scalar(card.accept_mode)}")
+    if card.side_effect_level:
+        lines.append(f"side_effect_level: {_format_scalar(card.side_effect_level)}")
+    if card.next_action:
+        lines.append(f"next_action: {_format_scalar(card.next_action)}")
     _write_list(lines, "tags", card.tags)
     lines.append("assets:")
     if card.links.prd:
@@ -190,6 +198,12 @@ def save_card(project_path: str | Path, card: ProjectCard) -> Path:
             lines.append("  feishu:")
             for url in card.links.feishu:
                 lines.append(f"    - {_format_scalar(url)}")
+    if card.source.platform or card.source.url:
+        lines.append("source:")
+        if card.source.platform:
+            lines.append(f"  platform: {_format_scalar(card.source.platform)}")
+        if card.source.url:
+            lines.append(f"  url: {_format_scalar(card.source.url)}")
     if card.archive.reason:
         key = "discard_reason" if card.area == "discard" or card.stage == "discarded" else "archive_reason"
         lines.append(f"{key}: {_format_scalar(card.archive.reason)}")
@@ -211,6 +225,7 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
     area = _normalize_area(metadata.get("area"), path, root_path)
     assets = metadata.get("assets") if isinstance(metadata.get("assets"), dict) else {}
     links_meta = metadata.get("links") if isinstance(metadata.get("links"), dict) else {}
+    source_meta = metadata.get("source") if isinstance(metadata.get("source"), dict) else {}
     feishu = links_meta.get("feishu") if isinstance(links_meta, dict) else []
     reports_dir = assets.get("reports_dir") or "reports"
     reports_path = path / str(reports_dir)
@@ -227,6 +242,7 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
         summary=str(metadata.get("summary") or _summary_from_body(body)),
         date=str(metadata.get("date") or infer_workspace_date(path, root_path) or "") or None,
         schema_version=str(metadata.get("schema") or metadata.get("schema_version") or "chatboard.project_card.v1"),
+        type=str(metadata.get("type") or "project"),
         priority=int(metadata.get("priority") or 0),
         owner=metadata.get("owner"),
         assignee=metadata.get("assignee"),
@@ -237,6 +253,13 @@ def load_card(project_path: str | Path, root: str | Path | None = None) -> Proje
             feishu=_as_list(feishu),
             reports=reports,
         ),
+        source=CardSource(
+            platform=source_meta.get("platform") if isinstance(source_meta, dict) else None,
+            url=source_meta.get("url") if isinstance(source_meta, dict) else None,
+        ),
+        accept_mode=metadata.get("accept_mode"),
+        side_effect_level=metadata.get("side_effect_level"),
+        next_action=metadata.get("next_action"),
         discussion=DiscussionState(status="review" if area == "discussion" else "not_started"),
         archive=ArchiveState(
             ready=str(metadata.get("stage") or "") == "archive_ready",

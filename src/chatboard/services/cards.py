@@ -9,12 +9,15 @@ from typing import Any
 
 from chatboard.models import (
     ArchiveState,
+    BoardColumn,
     CardLinks,
     CardRef,
+    CardSource,
     CardTimestamps,
     DetailSection,
     DiscussionState,
     ProjectCard,
+    TASK_COLUMNS,
     VALID_AREAS,
     VALID_STAGES,
     utc_now,
@@ -48,6 +51,24 @@ def _safe_child_path(root: Path, relative_path: str) -> Path:
     except ValueError as exc:
         raise ValueError("path escapes card root") from exc
     return candidate
+
+
+def _safe_relative_parts(value: str) -> tuple[str, ...]:
+    path = Path(value)
+    parts = path.parts
+    if path.is_absolute() or not parts or any(part in {"", ".", ".."} for part in parts):
+        raise ValueError("path escapes card root")
+    return parts
+
+
+def _load_task_card(card_id: str, root: str | Path | None = None) -> tuple[Path, ProjectCard]:
+    project_path = find_card_path(card_id, root)
+    if project_path is None:
+        raise FileNotFoundError(card_id)
+    card = load_card(project_path, root)
+    if card.type != "task" or card.area == "discard":
+        raise FileNotFoundError(card_id)
+    return project_path, card
 
 
 def _title_from_project(project_path: Path) -> str:
@@ -201,6 +222,76 @@ def save_existing_card(project_path: str | Path, card: ProjectCard) -> ProjectCa
     return card
 
 
+def _dedupe_tags(values: list[str]) -> list[str]:
+    tags: list[str] = []
+    for value in values:
+        tag = str(value).strip()
+        if tag and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def create_task(
+    title: str,
+    *,
+    description: str = "",
+    root: str | Path | None = None,
+    topic: str = "tasks",
+    slug: str | None = None,
+    source_platform: str | None = None,
+    source_url: str | None = None,
+    accept_mode: str | None = None,
+    side_effect_level: str | None = None,
+    next_action: str | None = None,
+    assignee: str | None = None,
+    tags: list[str] | None = None,
+    dry_run: bool = False,
+) -> ProjectCard:
+    """Create a task card skeleton for the separate Tasks board tab."""
+
+    clean_title = title.strip()
+    if not clean_title:
+        raise ValueError("title is required")
+    root_path = resolve_workspace_root(root)
+    clean_topic = (topic or "tasks").strip("/")
+    task_slug = slug or slugify_id(clean_title)
+    project_path = root_path / "projects" / Path(*_safe_relative_parts(clean_topic)) / Path(*_safe_relative_parts(task_slug))
+    if project_path.exists():
+        raise FileExistsError(project_path)
+    relative = as_workspace_relative(project_path, root_path)
+    summary = description.strip()
+    card = ProjectCard(
+        id=slugify_id(relative),
+        title=clean_title,
+        type="task",
+        description=summary,
+        summary=summary,
+        workspace_path=relative,
+        area="projects",
+        stage="inbox",
+        date=infer_workspace_date(project_path, root_path),
+        tags=_dedupe_tags([clean_topic, *(tags or [])]),
+        assignee=assignee,
+        links=CardLinks(prd="PRD.md", progress="progress.md"),
+        source=CardSource(platform=source_platform, url=source_url),
+        accept_mode=accept_mode or "accept",
+        side_effect_level=side_effect_level or "local_write",
+        next_action=next_action,
+        discussion=DiscussionState(next_action=next_action),
+        timestamps=CardTimestamps(),
+    )
+    if dry_run:
+        return card
+    project_path.mkdir(parents=True, exist_ok=False)
+    (project_path / ".trash").mkdir()
+    (project_path / "reports").mkdir()
+    prd_body = summary or "TODO"
+    (project_path / "PRD.md").write_text(f"# {clean_title}\n\n{prd_body}\n", encoding="utf-8")
+    (project_path / "progress.md").write_text(f"# Progress\n\n- {utc_now()} created task card.\n", encoding="utf-8")
+    save_card(project_path, card)
+    return card
+
+
 def find_card_path(card_id: str, root: str | Path | None = None) -> Path | None:
     from chatboard.services.workspace import iter_project_dirs
 
@@ -333,13 +424,136 @@ def update_card(card_id: str, patch: dict, root: str | Path | None = None) -> Pr
     if project_path is None:
         raise FileNotFoundError(card_id)
     card = ensure_card(project_path, root)
-    for key in ("title", "summary", "stage", "priority", "owner", "assignee", "tags"):
+    for key in (
+        "title",
+        "description",
+        "summary",
+        "stage",
+        "priority",
+        "owner",
+        "assignee",
+        "tags",
+        "accept_mode",
+        "side_effect_level",
+        "next_action",
+    ):
         if key in patch:
             setattr(card, key, patch[key])
+    if "source" in patch and isinstance(patch["source"], dict):
+        card.source = CardSource(platform=patch["source"].get("platform"), url=patch["source"].get("url"))
+    if "source_platform" in patch or "source_url" in patch:
+        card.source = CardSource(
+            platform=patch.get("source_platform", card.source.platform),
+            url=patch.get("source_url", card.source.url),
+        )
+    if card.next_action:
+        card.discussion.next_action = card.next_action
     if "stage" in patch and card.stage not in VALID_STAGES:
         raise ValueError(f"invalid stage: {card.stage}")
     save_card(project_path, card)
     return card
+
+
+def available_transitions(card: ProjectCard) -> list[str]:
+    if card.stage == "inbox":
+        return ["accept", "block", "move"]
+    if card.stage == "ready":
+        return ["start", "block", "done", "move"]
+    if card.stage == "running":
+        return ["review", "block", "done", "move"]
+    if card.stage == "blocked":
+        return ["unblock", "move"]
+    if card.stage == "review":
+        return ["done", "block", "move"]
+    if card.stage == "done":
+        return ["move"]
+    return ["move"]
+
+
+def card_status(card_id: str, root: str | Path | None = None) -> dict:
+    _, card = _load_task_card(card_id, root)
+    data = card.to_dict()
+    data["available_transitions"] = available_transitions(card)
+    return data
+
+
+def transition_card(
+    card_id: str,
+    transition: str,
+    *,
+    reason: str | None = None,
+    need: str | None = None,
+    summary: str | None = None,
+    stage: str | None = None,
+    root: str | Path | None = None,
+) -> ProjectCard:
+    project_path, card = _load_task_card(card_id, root)
+    if transition == "accept":
+        card.stage = "ready"
+    elif transition == "start":
+        card.stage = "running"
+    elif transition == "review":
+        card.stage = "review"
+    elif transition == "block":
+        card.stage = "blocked"
+        if reason:
+            card.discussion.questions.append(reason)
+        if need:
+            card.next_action = need
+            card.discussion.next_action = need
+    elif transition == "unblock":
+        card.stage = "ready"
+    elif transition == "done":
+        card.stage = "done"
+        if summary:
+            card.summary = summary
+    elif transition == "move":
+        if not stage:
+            raise ValueError("stage is required for move transition")
+        if stage not in VALID_STAGES:
+            raise ValueError(f"invalid stage: {stage}")
+        card.stage = stage
+    else:
+        raise ValueError(f"invalid transition: {transition}")
+    if reason and transition != "block":
+        card.discussion.decisions.append(reason)
+    save_card(project_path, card)
+    return card
+
+
+def delete_card(card_id: str, *, reason: str, root: str | Path | None = None, dry_run: bool = False) -> dict:
+    if not reason.strip():
+        raise ValueError("reason is required")
+    _load_task_card(card_id, root)
+    result = move_card(card_id, "discard", stage="discarded", root=root, dry_run=dry_run)
+    result["reason"] = reason
+    if dry_run:
+        return result
+    destination = Path(result["to"])
+    card = ensure_card(destination, root)
+    card.archive.reason = reason
+    save_card(destination, card)
+    result["card"] = card.to_dict()
+    return result
+
+
+def task_catalog(root: str | Path | None = None, ensure: bool = False) -> dict:
+    from chatboard.services.workspace import iter_project_dirs
+
+    root_path = resolve_workspace_root(root)
+    columns = {key: BoardColumn(key=key, title=title) for key, title in TASK_COLUMNS}
+    cards: list[ProjectCard] = []
+    for project_path in iter_project_dirs(root_path, include_nested=True):
+        card = ensure_card(project_path, root_path) if ensure else load_card(project_path, root_path)
+        if card.type != "task" or card.area == "discard":
+            continue
+        cards.append(card)
+        columns.setdefault(card.column, BoardColumn(key=card.column, title=card.column)).cards.append(card)
+    return {
+        "root": root_path.as_posix(),
+        "columns": [column.to_dict() for column in columns.values()],
+        "total_cards": len(cards),
+    }
 
 
 def move_card(

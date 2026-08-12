@@ -11,12 +11,15 @@ Area = Literal["projects", "discussion", "archive", "discard", "trash"]
 CARD_SCHEMA_VERSION = "chatboard.project_card.v1"
 VALID_AREAS = {"projects", "discussion", "archive", "discard", "trash"}
 VALID_STAGES = {
+    "inbox",
     "scaffold",
     "prd",
     "ready",
+    "running",
     "development",
     "validation",
     "complete",
+    "done",
     "blocked",
     "paused",
     "review",
@@ -42,6 +45,12 @@ class CardLinks:
     feishu: list[str] = field(default_factory=list)
     reports: list[str] = field(default_factory=list)
     repo: str | None = None
+
+
+@dataclass
+class CardSource:
+    platform: str | None = None
+    url: str | None = None
 
 
 @dataclass
@@ -100,6 +109,10 @@ class ProjectCard:
     assignee: str | None = None
     tags: list[str] = field(default_factory=list)
     links: CardLinks = field(default_factory=CardLinks)
+    source: CardSource = field(default_factory=CardSource)
+    accept_mode: str | None = None
+    side_effect_level: str | None = None
+    next_action: str | None = None
     discussion: DiscussionState = field(default_factory=DiscussionState)
     archive: ArchiveState = field(default_factory=ArchiveState)
     dependencies: CardDependencies = field(default_factory=CardDependencies)
@@ -108,6 +121,8 @@ class ProjectCard:
 
     @property
     def column(self) -> str:
+        if self.type == "task":
+            return task_column_for(self.stage)
         return column_for(self.area, self.stage)
 
     def touch(self) -> None:
@@ -158,6 +173,32 @@ DEFAULT_COLUMNS: list[tuple[str, str]] = [
     ("archive", "已归档"),
 ]
 VISIBLE_COLUMN_KEYS = {key for key, _title in DEFAULT_COLUMNS}
+
+TASK_COLUMNS: list[tuple[str, str]] = [
+    ("inbox", "Inbox"),
+    ("ready", "Ready"),
+    ("running", "Running"),
+    ("blocked", "Blocked"),
+    ("review", "Review"),
+    ("done", "Done"),
+]
+VISIBLE_TASK_COLUMN_KEYS = {key for key, _title in TASK_COLUMNS}
+
+
+def task_column_for(stage: str) -> str:
+    if stage == "inbox":
+        return "inbox"
+    if stage == "ready":
+        return "ready"
+    if stage == "running":
+        return "running"
+    if stage == "blocked":
+        return "blocked"
+    if stage in {"review", "validation", "decision"}:
+        return "review"
+    if stage in {"done", "complete", "archive_ready", "archived"}:
+        return "done"
+    return "inbox"
 
 
 def column_for(area: str, stage: str) -> str:

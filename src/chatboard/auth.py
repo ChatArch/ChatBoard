@@ -9,22 +9,38 @@ from hashlib import sha256
 
 from fastapi import Request, Response
 
+from chatboard.config import load_runtime_config
+
 SESSION_COOKIE = "chatboard_session"
 DEFAULT_SESSION_TTL_SECONDS = 12 * 60 * 60
 
 
 def auth_password() -> str | None:
-    password = os.environ.get("CHATBOARD_PASSWORD")
+    password = os.environ.get("CHATBOARD_PASSWORD") or load_runtime_config()["password"]
     return password if password else None
 
 
 def auth_username() -> str | None:
-    username = os.environ.get("CHATBOARD_USERNAME")
+    username = os.environ.get("CHATBOARD_USERNAME") or load_runtime_config()["username"]
     return username if username else None
 
 
 def auth_enabled() -> bool:
     return auth_password() is not None
+
+
+def api_token_from_chatenv() -> str | None:
+    token = os.environ.get("CHATBOARD_API_KEY") or load_runtime_config()["api_key"]
+    return token if token else None
+
+
+def api_token_enabled() -> bool:
+    return api_token_from_chatenv() is not None
+
+
+def verify_api_token(candidate: str | None) -> bool:
+    expected = api_token_from_chatenv()
+    return expected is not None and candidate is not None and hmac.compare_digest(candidate, expected)
 
 
 def session_ttl_seconds() -> int:
@@ -38,7 +54,7 @@ def session_ttl_seconds() -> int:
 
 
 def _auth_secret() -> str:
-    return os.environ.get("CHATBOARD_AUTH_SECRET") or auth_password() or "chatboard-local"
+    return os.environ.get("CHATBOARD_AUTH_SECRET") or load_runtime_config()["auth_secret"] or auth_password() or "chatboard-local"
 
 
 def _sign(payload: str) -> str:
@@ -77,7 +93,19 @@ def validate_session_token(token: str | None, now: float | None = None) -> bool:
 
 
 def request_is_authenticated(request: Request) -> bool:
+    if _request_api_token_is_valid(request):
+        return True
+    if not auth_enabled():
+        return not api_token_enabled()
     return validate_session_token(request.cookies.get(SESSION_COOKIE))
+
+
+def _request_api_token_is_valid(request: Request) -> bool:
+    token = request.headers.get("X-ChatBoard-Token")
+    authorization = request.headers.get("Authorization", "")
+    if authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    return verify_api_token(token)
 
 
 def _cookie_secure() -> bool:
