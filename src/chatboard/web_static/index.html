@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="chatboard-default-backend-name" content="default">
+  <meta name="chatboard-default-backend-url" content="">
   <title>ChatBoard</title>
   <link rel="stylesheet" href="/assets/styles.css?v=settings-assets-review-2">
 </head>
@@ -59,34 +61,40 @@
           <p class="eyebrow">Session Backend</p>
           <h2 id="settingsTitle">Settings</h2>
           <div class="detail-path">Choose which ChatBoard API this frontend reads for the current browser session.</div>
-          <div class="settings-build-note">Session-only backend switcher · saved in this browser</div>
+          <div class="settings-build-note">Session backend switcher · profiles stored server-side</div>
         </div>
         <button id="closeSettingsBtn" class="ghost" type="button">Close</button>
       </header>
       <div class="settings-body">
         <section class="section settings-section">
-          <h3>Active Backend</h3>
+          <h3>Current Backend</h3>
           <div id="backendActiveSummary" class="backend-active-summary">This site</div>
-          <label for="backendSelect">Saved backends</label>
-          <select id="backendSelect"><option value="current">This site — current browser origin</option></select>
+          <label for="backendSelect">Backend profiles</label>
+          <select id="backendSelect"><option value="default">default — loading profiles</option></select>
           <div class="settings-actions">
             <button id="useBackendBtn" type="button">Use for session</button>
-            <button id="useCurrentBackendBtn" class="ghost" type="button">Use this site for session</button>
+            <button id="useDefaultBackendBtn" class="ghost" type="button">Use default</button>
             <a id="openBackendLink" class="settings-link" href="/" target="_blank" rel="noopener noreferrer">Open backend</a>
           </div>
+          <div class="settings-note">Backend can be an IP:port such as 172.25.236.90:8010, or a public/Nginx URI such as https://host/api. The current backend is used only for this browser session.</div>
         </section>
         <section class="section settings-section">
           <h3>Add or Edit Backend</h3>
+          <label for="backendId">Backend ID</label>
+          <input id="backendId" type="text" autocomplete="off" placeholder="default, mini, recall">
           <label for="backendName">Name</label>
           <input id="backendName" type="text" placeholder="LocalBoard / Recall / Cube">
           <label for="backendUrl">API base URL</label>
           <input id="backendUrl" type="url" placeholder="https://localboard.public.wzhecnu.cn">
           <label for="backendToken">API token (optional)</label>
-          <input id="backendToken" type="password" autocomplete="off" placeholder="Stored only in this browser">
+          <input id="backendToken" type="password" autocomplete="off" placeholder="Stored server-side after save">
+          <label for="registryToken">Registry token</label>
+          <input id="registryToken" type="password" autocomplete="off" placeholder="Required to add, update, remove, or set default">
           <div class="settings-actions">
             <button id="saveBackendBtn" type="button">Save backend</button>
             <button id="removeBackendBtn" class="ghost" type="button">Remove saved</button>
             <button id="testBackendBtn" class="ghost" type="button">Test health</button>
+            <button id="setDefaultBackendBtn" class="ghost" type="button">Set default</button>
           </div>
           <div id="backendSettingsStatus" class="settings-note">Current site is always available and is the default for new sessions.</div>
         </section>

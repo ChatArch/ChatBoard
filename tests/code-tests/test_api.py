@@ -4,7 +4,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+import chatboard.api as api_module
 from chatboard.api import _cors_origins, _is_public_auth_path, app
+from chatboard.services.backends import BackendProfile, backend_api_url, load_backend_profiles, save_backend_profiles
 
 
 def _project(root: Path) -> None:
@@ -156,6 +158,96 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert 'data-page-tab="machines"' not in index.text
 
 
+def test_index_injects_default_backend_from_environment(monkeypatch):
+    monkeypatch.setenv("CHATBOARD_DEFAULT_BACKEND_NAME", "mini-default")
+    monkeypatch.setenv("CHATBOARD_DEFAULT_BACKEND_URL", "172.25.236.90:8010")
+    monkeypatch.setenv("CHATBOARD_DEFAULT_BACKEND_TOKEN", "test-token")
+    client = TestClient(app)
+
+    index = client.get("/")
+
+    assert index.status_code == 200
+    assert 'name="chatboard-default-backend-name" content="mini-default"' in index.text
+    assert 'name="chatboard-default-backend-url" content="172.25.236.90:8010"' in index.text
+    assert "test-token" not in index.text
+    assert "chatboard-default-backend-token" not in index.text
+
+
+def test_backend_profiles_are_redacted_and_default_is_unique(tmp_path, monkeypatch):
+    registry = tmp_path / "backends.json"
+    monkeypatch.setenv("CHATBOARD_BACKENDS_FILE", str(registry))
+    monkeypatch.setenv("CHATBOARD_REGISTRY_TOKEN", "registry-token")
+    save_backend_profiles(
+        [
+            BackendProfile(id="default", name="Mini", url="172.25.236.90:8010", api_key="secret-a", is_default=True),
+            BackendProfile(id="other", name="Other", url="https://example.test/api", api_key="secret-b"),
+        ]
+    )
+    client = TestClient(app)
+
+    profiles = client.get("/api/backend-profiles")
+
+    assert profiles.status_code == 200
+    data = profiles.json()["profiles"]
+    assert [profile["is_default"] for profile in data].count(True) == 1
+    assert data[0]["has_token"] is True
+    assert "secret-a" not in profiles.text
+
+    denied = client.post("/api/backend-profiles/other/default")
+    assert denied.status_code == 403
+
+    allowed = client.post("/api/backend-profiles/other/default", headers={"X-ChatBoard-Registry-Token": "registry-token"})
+    assert allowed.status_code == 200
+    assert allowed.json()["profile"]["is_default"] is True
+    assert [profile.id for profile in load_backend_profiles() if profile.is_default] == ["other"]
+
+
+def test_backend_url_builder_accepts_ip_port_and_api_prefix():
+    assert backend_api_url("172.25.236.90:8010", "/api/health") == "http://172.25.236.90:8010/api/health"
+    assert backend_api_url("https://example.test/api", "/api/health") == "https://example.test/api/health"
+
+
+def test_backend_proxy_uses_registry_token_without_exposing_secret(tmp_path, monkeypatch):
+    registry = tmp_path / "backends.json"
+    monkeypatch.setenv("CHATBOARD_BACKENDS_FILE", str(registry))
+    save_backend_profiles(
+        [BackendProfile(id="default", name="Mini", url="https://backend.example/api", api_key="backend-secret", is_default=True)]
+    )
+    captured = {}
+
+    class FakeResponse:
+        status = 200
+        headers = {"content-type": "application/json"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def fake_urlopen(request, timeout):
+        captured["url"] = request.full_url
+        captured["token"] = request.get_header("X-chatboard-token")
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr(api_module.urllib_request, "urlopen", fake_urlopen)
+    client = TestClient(app)
+
+    proxied = client.get("/api/backends/default/api/health", params={"check": "1"})
+
+    assert proxied.status_code == 200
+    assert proxied.json()["ok"] is True
+    assert captured == {
+        "url": "https://backend.example/api/health?check=1",
+        "token": "backend-secret",
+        "timeout": 8,
+    }
+
+
 def test_board_static_assets_support_resizable_columns():
     app_js = Path("src/chatboard/web_static/assets/app.js").read_text(encoding="utf-8")
     styles = Path("src/chatboard/web_static/assets/styles.css").read_text(encoding="utf-8")
@@ -178,12 +270,14 @@ def test_board_static_assets_support_backend_switching():
 
     assert "chatboard.backends.v1" in app_js
     assert "chatboard.activeBackend.v1" in app_js
-    assert "backendApiUrl" in app_js
-    assert "backendCredentials" in app_js
-    assert "X-ChatBoard-Token" in app_js
-    assert "Ignore invalid saved URLs so Settings can always open" in app_js
+    assert "DEFAULT_BACKEND_ID = 'default'" in app_js
+    assert "loadBackendProfiles" in app_js
+    assert "X-ChatBoard-Registry-Token" in app_js
+    assert "/api/backends/" in app_js
+    assert "localStorage.setItem(BACKEND_STORAGE_KEY" not in app_js
+    assert "X-ChatBoard-Token" not in app_js
+    assert "Token is configured; enter a new token to replace" in app_js
     assert "sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY" in app_js
-    assert "localStorage.setItem(BACKEND_STORAGE_KEY" in app_js
     assert "Use for session" in Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
     assert ".resource-nav a" in styles
     assert "text-decoration: none !important" in styles

@@ -33,6 +33,40 @@ class ChatboardConfig(BaseEnvConfig):
         desc="ChatBoard service base URL.",
     )
 
+    CHATBOARD_DEFAULT_BACKEND_NAME = EnvField(
+        "CHATBOARD_DEFAULT_BACKEND_NAME",
+        default="default",
+        desc="Default backend profile name shown in the Web UI.",
+    )
+
+    CHATBOARD_DEFAULT_BACKEND_URL = EnvField(
+        "CHATBOARD_DEFAULT_BACKEND_URL",
+        desc="Default backend base URL for the Web UI backend switcher.",
+    )
+
+    CHATBOARD_DEFAULT_BACKEND_TOKEN = EnvField(
+        "CHATBOARD_DEFAULT_BACKEND_TOKEN",
+        desc="Default backend API token used by the server-side backend proxy.",
+        is_sensitive=True,
+    )
+
+    CHATBOARD_BACKENDS_FILE = EnvField(
+        "CHATBOARD_BACKENDS_FILE",
+        desc="Path to the server-side backend profile registry JSON file.",
+    )
+
+    CHATBOARD_BACKENDS_JSON = EnvField(
+        "CHATBOARD_BACKENDS_JSON",
+        desc="Inline server-side backend profile registry JSON.",
+        is_sensitive=True,
+    )
+
+    CHATBOARD_REGISTRY_TOKEN = EnvField(
+        "CHATBOARD_REGISTRY_TOKEN",
+        desc="Token required for backend registry self-registration or scripted profile writes.",
+        is_sensitive=True,
+    )
+
     CHATBOARD_WORKSPACE_ROOT = EnvField(
         "CHATBOARD_WORKSPACE_ROOT",
         default=str(DEFAULT_WORKSPACE_ROOT),
@@ -76,8 +110,15 @@ def load_runtime_config() -> dict[str, Any]:
     BaseEnvConfig.load_all(get_paths().envs_dir)
     workspace = _field_value(ChatboardConfig.CHATBOARD_WORKSPACE_ROOT) or str(DEFAULT_WORKSPACE_ROOT)
     service_url = _field_value(ChatboardConfig.CHATBOARD_SERVICE_URL) or DEFAULT_SERVICE_URL
+    default_backend_url = _field_value(ChatboardConfig.CHATBOARD_DEFAULT_BACKEND_URL) or service_url
     return {
         "service_url": service_url,
+        "default_backend_name": _field_value(ChatboardConfig.CHATBOARD_DEFAULT_BACKEND_NAME) or "default",
+        "default_backend_url": default_backend_url,
+        "default_backend_token": _field_value(ChatboardConfig.CHATBOARD_DEFAULT_BACKEND_TOKEN) or None,
+        "backends_file": _field_value(ChatboardConfig.CHATBOARD_BACKENDS_FILE) or None,
+        "backends_json": _field_value(ChatboardConfig.CHATBOARD_BACKENDS_JSON) or None,
+        "registry_token": _field_value(ChatboardConfig.CHATBOARD_REGISTRY_TOKEN) or None,
         "workspace_root": Path(workspace).expanduser().resolve(),
         "username": _field_value(ChatboardConfig.CHATBOARD_USERNAME) or None,
         "password": _field_value(ChatboardConfig.CHATBOARD_PASSWORD) or None,
