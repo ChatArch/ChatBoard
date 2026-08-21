@@ -32,6 +32,7 @@ jobs:
         run: |
           chatbd --version
           chatbd --tree
+          chatbd --tree-brief
       - name: Build distributions
         run: python -m build
       - name: Check distributions

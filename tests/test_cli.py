@@ -16,39 +16,75 @@ def test_top_level_cli_only_exposes_runtime_and_project_tools():
 
     assert result.exit_code == 0
     assert "--tree" in result.output
+    assert "--tree-brief" in result.output
     assert "project" in result.output
     assert "serve" in result.output
     assert "trash" not in result.output
     assert "discussion" not in result.output
 
 
-def test_tree_shows_registered_project_surface_with_purposes():
+def test_tree_shows_registered_project_surface_with_signatures_and_purposes():
     result = CliRunner().invoke(main, ["--tree"])
 
     assert result.exit_code == 0, result.output
-    assert "chatbd  # Run the ChatBoard web app and Project management tools." in result.output
-    assert "--help  # Show this help message." in result.output
-    assert "--version  # Show the installed package version." in result.output
-    assert "--tree  # Print the registered command tree." in result.output
-    assert "serve [--host <HOST>]" in result.output
+    assert result.output.splitlines()[0] == "chatbd"
+    assert result.output.splitlines().count("chatbd") == 1
+    assert "--help  # Show this message and exit." in result.output
+    assert "--version  # Show the version and exit." in result.output
+    assert "--tree  # Print the registered CLI tree and exit." in result.output
+    assert "--tree-brief  # Print the registered CLI tree without parameter signatures and exit." in result.output
+    assert "serve [--host HOST]" in result.output
     assert "project  # Inspect and manage ChatArch workspace Projects." in result.output
+    assert "task  # Manage Tasks shown on the Tasks board tab." in result.output
+    assert "create [TITLE] [--description DESCRIPTION]" in result.output
+    assert "list  # Print the Tasks board grouped by task stages." in result.output
+    assert "status [CARD-ID]" in result.output
+    assert "update [CARD-ID] [--title TITLE]" in result.output
+    assert "transition [CARD-ID] [TRANSITION]" in result.output
+    assert "delete [CARD-ID] [--reason REASON]" in result.output
     assert "card  # Inspect and move Project cards." in result.output
-    assert "ensure [<PROJECT-PATH>]" in result.output
+    assert "ensure [PROJECT-PATH]" in result.output
+    assert "show [CARD-ID]" in result.output
+    assert "move [CARD-ID] [AREA]" in result.output
+    assert "discussion  # Create Discussion topics and add Project items." in result.output
+    assert "add-item [DISCUSSION-ID] [CARD-ID]" in result.output
+    assert "archive  # Archive completed Project cards." in result.output
+    assert "run [CARD-ID]" in result.output
+    assert "discard [CARD-ID]" in result.output
+    assert "#" in result.output
+
+
+def test_tree_brief_keeps_registered_surface_without_parameter_signatures():
+    result = CliRunner().invoke(main, ["--tree-brief"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.splitlines()[0] == "chatbd"
+    assert "serve  # Start the ChatBoard web UI." in result.output
+    assert "project  # Inspect and manage ChatArch workspace Projects." in result.output
+    assert "task  # Manage Tasks shown on the Tasks board tab." in result.output
+    assert "create  # Create a Task card and task project skeleton." in result.output
+    assert "transition  # Move a Task card between task stages." in result.output
+    assert "card  # Inspect and move Project cards." in result.output
     assert "discussion  # Create Discussion topics and add Project items." in result.output
     assert "archive  # Archive completed Project cards." in result.output
-    assert "discard [<CARD-ID>]" in result.output
-    assert "#" in result.output
+    assert "discard  # Move a Project card into the formal Discard area." in result.output
+    assert "[--host HOST]" not in result.output
+    assert "[TITLE]" not in result.output
+    assert "[--interactive]" not in result.output
 
 
 def test_template_hello_command_is_not_registered():
     help_result = CliRunner().invoke(main, ["--help"])
     tree_result = CliRunner().invoke(main, ["--tree"])
+    brief_tree_result = CliRunner().invoke(main, ["--tree-brief"])
     missing_result = CliRunner().invoke(main, ["hello"])
 
     assert help_result.exit_code == 0, help_result.output
     assert tree_result.exit_code == 0, tree_result.output
+    assert brief_tree_result.exit_code == 0, brief_tree_result.output
     assert "hello" not in help_result.output.lower()
     assert "hello" not in tree_result.output.lower()
+    assert "hello" not in brief_tree_result.output.lower()
     assert missing_result.exit_code != 0
     assert "No such command" in missing_result.output
 
@@ -66,5 +102,5 @@ def test_tree_root_uses_public_console_command_even_in_python_module_mode():
     result = CliRunner().invoke(main, ["--tree"], prog_name="python -m chatboard.cli")
 
     assert result.exit_code == 0, result.output
-    assert result.output.splitlines()[0] == "chatbd  # Run the ChatBoard web app and Project management tools."
+    assert result.output.splitlines()[0] == "chatbd"
     assert "python -m chatboard.cli" not in result.output

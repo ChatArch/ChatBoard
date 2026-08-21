@@ -4,34 +4,35 @@
 
 ## CLI Tree
 
-Run `chatbd --tree` to print the command surface from the actual Click registry. This page should stay aligned with that runtime output.
+Run `chatbd --tree` to have ChatStyle print the command surface with parameter signatures from the actual Click registry. `chatbd --tree-brief` prints the same hierarchy and purposes without signatures. This page should stay aligned with the runtime output.
 
 ```text
-chatbd  # Run the ChatBoard web app and Project management tools.
-├── --help  # Show this help message.
-├── --version  # Show the installed package version.
-├── --tree  # Print the registered command tree.
-├── serve [--host <HOST>] [--port <PORT>] [--root <ROOT>] [--reload] [--username <USERNAME>] [--password <PASSWORD>] [--password-file <PASSWORD-FILE>]  # Start the ChatBoard web UI.
-└── project  # Inspect and manage ChatArch workspace Projects.
-    ├── scan  # Scan the workspace and list Project cards without writing metadata.
-    ├── catalog  # Print the Project board catalog grouped by columns.
-    ├── task  # Manage Tasks shown on the Tasks board tab.
-    │   ├── create [<TITLE>] [--description <DESCRIPTION>] [--topic <TOPIC>] [--slug <SLUG>] [--source-platform <SOURCE-PLATFORM>] [--source-url <SOURCE-URL>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--next-action <NEXT-ACTION>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
-    │   ├── list  # Print the Tasks board grouped by task stages.
-    │   ├── status [<CARD-ID>] [--interactive]  # Show a Task card's current status and available transitions.
-    │   ├── update [<CARD-ID>] [--title <TITLE>] [--description <DESCRIPTION>] [--summary <SUMMARY>] [--next-action <NEXT-ACTION>] [--accept-mode <ACCEPT-MODE>] [--side-effect-level <SIDE-EFFECT-LEVEL>] [--assignee <ASSIGNEE>] [--tag <TAGS>] [--interactive]  # Update Task metadata.
-    │   ├── transition [<CARD-ID>] [<TRANSITION>] [--reason <REASON>] [--need <NEED>] [--summary <SUMMARY>] [--stage <STAGE>] [--interactive]  # Move a Task card between task stages.
-    │   └── delete [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
-    ├── card  # Inspect and move Project cards.
-    │   ├── ensure [<PROJECT-PATH>] [--interactive]  # Create card.md metadata for an existing Project if missing.
-    │   ├── show [<CARD-ID>] [--interactive]  # Show the detail projection for a Project card.
-    │   └── move [<CARD-ID>] [<AREA>] [--stage <STAGE>] [--dry-run] [--interactive]  # Move a Project card between workspace areas.
-    ├── discussion  # Create Discussion topics and add Project items.
-    │   ├── create [<TITLE>] [--slug <SLUG>] [--interactive]  # Create a project-like Discussion topic.
-    │   └── add-item [<DISCUSSION-ID>] [<CARD-ID>] [--dry-run] [--interactive]  # Move a Project card into a Discussion topic's Items directory.
-    ├── archive  # Archive completed Project cards.
-    │   └── run [<CARD-ID>] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
-    └── discard [<CARD-ID>] [--reason <REASON>] [--dry-run] [--interactive]  # Move a Project card into the formal Discard area.
+chatbd
+├── --help  # Show this message and exit.
+├── --version  # Show the version and exit.
+├── --tree  # Print the registered CLI tree and exit.
+├── --tree-brief  # Print the registered CLI tree without parameter signatures and exit.
+├── project  # Inspect and manage ChatArch workspace Projects.
+│   ├── archive  # Archive completed Project cards.
+│   │   └── run [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
+│   ├── card  # Inspect and move Project cards.
+│   │   ├── ensure [PROJECT-PATH] [--interactive]  # Create card.md metadata for an existing Project if missing.
+│   │   ├── move [CARD-ID] [AREA] [--stage STAGE] [--dry-run] [--interactive]  # Move a Project card between workspace areas.
+│   │   └── show [CARD-ID] [--interactive]  # Show the detail projection for a Project card.
+│   ├── catalog  # Print the Project board catalog grouped by columns.
+│   ├── discard [CARD-ID] [--reason REASON] [--dry-run] [--interactive]  # Move a Project card into the formal Discard area.
+│   ├── discussion  # Create Discussion topics and add Project items.
+│   │   ├── add-item [DISCUSSION-ID] [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into a Discussion topic's Items directory.
+│   │   └── create [TITLE] [--slug SLUG] [--interactive]  # Create a project-like Discussion topic.
+│   ├── scan  # Scan the workspace and list Project cards without writing metadata.
+│   └── task  # Manage Tasks shown on the Tasks board tab.
+│       ├── create [TITLE] [--description DESCRIPTION] [--topic TOPIC] [--slug SLUG] [--source-platform SOURCE-PLATFORM] [--source-url SOURCE-URL] [--accept-mode ACCEPT-MODE] [--side-effect-level SIDE-EFFECT-LEVEL] [--next-action NEXT-ACTION] [--assignee ASSIGNEE] [--tag TAGS] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
+│       ├── delete [CARD-ID] [--reason REASON] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
+│       ├── list  # Print the Tasks board grouped by task stages.
+│       ├── status [CARD-ID] [--interactive]  # Show a Task card's current status and available transitions.
+│       ├── transition [CARD-ID] [TRANSITION] [--reason REASON] [--need NEED] [--summary SUMMARY] [--stage STAGE] [--interactive]  # Move a Task card between task stages.
+│       └── update [CARD-ID] [--title TITLE] [--description DESCRIPTION] [--summary SUMMARY] [--next-action NEXT-ACTION] [--accept-mode ACCEPT-MODE] [--side-effect-level SIDE-EFFECT-LEVEL] [--assignee ASSIGNEE] [--tag TAGS] [--interactive]  # Update Task metadata.
+└── serve [--host HOST] [--port PORT] [--root ROOT] [--reload] [--username USERNAME] [--password PASSWORD] [--password-file PASSWORD-FILE]  # Start the ChatBoard web UI.
 ```
 
 ## Command Layers

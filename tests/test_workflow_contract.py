@@ -19,6 +19,7 @@ def test_ci_smokes_installed_cli_and_checks_distributions():
 
     assert "chatbd --version" in workflow
     assert "chatbd --tree" in workflow
+    assert "chatbd --tree-brief" in workflow
     assert "python -m twine check dist/*" in workflow
 
 

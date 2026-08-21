@@ -2,13 +2,19 @@
 
 ## Unreleased
 
+## 0.1.8 - 2026-08-21
+
 ### Added
 
 - Add draggable board column resizing with browser-local persistence and double-click reset.
+- Add `chatbd --tree-brief` for a compact signature-free view of the registered command surface.
 
 ### Changed
 
 - Fix the default Projects board column weights so an empty `想法` / `thoughts` column no longer receives the largest track.
+- Replace ChatBoard's package-local CLI tree renderer with ChatStyle `add_tree_option()`.
+- Align runtime dependencies to `chatstyle>=0.2.0,<0.3.0` and `chatenv>=0.2.10,<0.3.0`.
+- Keep docs builds on the supported `mkdocs-material>=9.5,<9.7` compatibility window.
 
 ## 0.1.7 - 2026-08-21
 
