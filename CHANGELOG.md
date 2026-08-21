@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.1.10 - 2026-08-22
+
 ### Added
 
 - Add a server-side backend profile store and proxy so the browser selects backend profiles without receiving backend API tokens.
