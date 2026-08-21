@@ -32,7 +32,6 @@ def test_paths_reports_chatenv_and_chatarch_owned_paths_without_secrets(tmp_path
         "CHATBOARD_USERNAME",
         "CHATBOARD_PASSWORD",
         "CHATBOARD_API_KEY",
-        "CHATBOARD_REGISTRY_TOKEN",
         "CHATBOARD_DEFAULT_BACKEND_TOKEN",
     ]:
         monkeypatch.delenv(key, raising=False)
@@ -45,7 +44,7 @@ def test_paths_reports_chatenv_and_chatarch_owned_paths_without_secrets(tmp_path
     assert data["paths"]["chatarch_home"] == str(tmp_path / ".chatarch")
     assert data["paths"]["chatenv_provider_dir"] == str(tmp_path / ".chatarch/envs/Chatboard")
     assert data["paths"]["chatboard_home"] == str(tmp_path / ".chatarch/chatboard")
-    assert data["paths"]["backend_registry_file"] == str(tmp_path / ".chatarch/chatboard/backends.json")
+    assert data["paths"]["backend_profiles_file"] == str(tmp_path / ".chatarch/chatboard/backends.json")
     assert data["config"]["username_configured"] is False
     assert "REDACTED" not in result.output
     assert "secret" not in result.output.lower()

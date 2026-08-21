@@ -292,7 +292,7 @@ function fillBackendForm(backend) {
   $('backendUrl').value = backend?.url || window.location.origin;
   tokenInput.value = '';
   tokenInput.dataset.hasSavedToken = backend?.has_token ? 'true' : 'false';
-  tokenInput.placeholder = backend?.has_token ? 'Token is configured; enter a new token to replace' : 'Paste backend API token';
+  tokenInput.placeholder = backend?.has_token ? 'Token configured; leave blank to keep it' : 'Paste backend API token if that backend requires one';
 }
 
 function renderBackendSelect() {
@@ -313,7 +313,7 @@ async function openSettings() {
   try {
     await loadBackendProfiles();
     renderBackendSelect();
-    setBackendStatus('Backend profiles are stored server-side. Tokens are never shown in this browser.');
+    setBackendStatus('Backend profiles are stored server-side. Backend API tokens are only used by this proxy and are never shown in the browser.');
   } catch (err) {
     state.backends.backends = [];
     renderBackendSelect();
@@ -337,11 +337,6 @@ function useBackend(id) {
   renderBackendSelect();
   initAuthControls();
   refresh();
-}
-
-function registryHeaders() {
-  const token = $('registryToken')?.value.trim() || '';
-  return token ? { 'X-ChatBoard-Registry-Token': token } : {};
 }
 
 function backendIdFromForm(selected, url) {
@@ -375,7 +370,7 @@ async function saveBackendFromForm() {
     const response = await fetch(`/api/backend-profiles/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...registryHeaders() },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
@@ -400,7 +395,6 @@ async function removeSelectedBackend() {
     const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}`, {
       method: 'DELETE',
       credentials: 'same-origin',
-      headers: registryHeaders(),
     });
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
     await loadBackendProfiles();
@@ -437,7 +431,6 @@ async function setDefaultBackendFromForm() {
     const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/default`, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: registryHeaders(),
     });
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
     await loadBackendProfiles();

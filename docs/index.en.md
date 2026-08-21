@@ -14,7 +14,7 @@ Long-lived documentation for `ChatBoard` lives here.
 ## Web UI
 
 - The Settings button in the board header manages backend profiles through the same-origin server-side proxy; browsers select only profile ids and never directly access backend URLs or store/send backend tokens.
-- The backend registry and proxy tokens should be managed through ChatEnv / `~/.chatarch`: the default registry is `~/.chatarch/chatboard/backends.json`, with `CHATBOARD_BACKENDS_FILE` as an explicit override.
+- The backend profile store should be managed through ChatEnv / `~/.chatarch`: the default file is `~/.chatarch/chatboard/backends.json`, with `CHATBOARD_BACKENDS_FILE` as an explicit override. Backend API tokens are one-way credentials used only by the proxy when calling that backend.
 
 ## Local Preview
 

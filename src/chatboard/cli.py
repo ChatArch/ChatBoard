@@ -143,7 +143,6 @@ def paths_command() -> None:
                 "username_configured": bool(config["username"]),
                 "password_configured": bool(config["password"]),
                 "api_key_configured": bool(config["api_key"]),
-                "registry_token_configured": bool(config["registry_token"]),
                 "default_backend_token_configured": bool(config["default_backend_token"]),
                 "backends_json_configured": bool(config["backends_json"]),
                 "session_ttl_seconds": config["session_ttl_seconds"],

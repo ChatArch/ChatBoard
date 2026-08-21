@@ -471,11 +471,11 @@ chatbd paths
 ```text
 ChatEnv profile:      ~/.chatarch/envs/Chatboard/<profile>.env
 ChatBoard state root: ~/.chatarch/chatboard/
-Backend registry:     ~/.chatarch/chatboard/backends.json
+Backend profile store: ~/.chatarch/chatboard/backends.json
 Runtime token store:  ~/.chatarch/tokens/Chatboard/<profile>.json
 ```
 
-ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码、自动化 API token、backend registry 和 server-side proxy token 分开保存到 ChatEnv profile。
+ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码、自动化 API token、backend profile store 和单向 backend API token 分开保存到 ChatEnv profile。
 
 分层语义：
 
@@ -508,9 +508,8 @@ chatenv token refresh Chatboard ops
 | `CHATBOARD_PASSWORD` | 启用登录并设置登录密码 |
 | `CHATBOARD_SERVICE_URL` | ChatEnv 中记录的 ChatBoard 服务基地址，供 token refresh / 外部调用使用 |
 | `CHATBOARD_HOME` | ChatBoard runtime/state root；默认 `~/.chatarch/chatboard` |
-| `CHATBOARD_BACKENDS_FILE` | server-side backend registry JSON；默认 `~/.chatarch/chatboard/backends.json` |
-| `CHATBOARD_REGISTRY_TOKEN` | 保护 backend profile 注册/写入的 server-side token |
-| `CHATBOARD_DEFAULT_BACKEND_TOKEN` | default backend API token；只由 server-side proxy 使用 |
+| `CHATBOARD_BACKENDS_FILE` | server-side backend profile store JSON；默认 `~/.chatarch/chatboard/backends.json` |
+| `CHATBOARD_DEFAULT_BACKEND_TOKEN` | default backend API token；单向用于 server-side proxy 调用该 backend |
 | `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
 | `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |

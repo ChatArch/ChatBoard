@@ -7,7 +7,6 @@ CHATBOARD_KEYS = [
     "CHATBOARD_HOME",
     "CHATBOARD_BACKENDS_FILE",
     "CHATBOARD_BACKENDS_JSON",
-    "CHATBOARD_REGISTRY_TOKEN",
     "CHATBOARD_DEFAULT_BACKEND_TOKEN",
     "CHATBOARD_USERNAME",
     "CHATBOARD_PASSWORD",
@@ -26,7 +25,7 @@ def test_runtime_paths_default_to_chatarch_home(tmp_path, monkeypatch):
     assert paths.chatarch_home == tmp_path / "chatarch-home"
     assert paths.chatenv_provider_dir == tmp_path / "chatarch-home/envs/Chatboard"
     assert paths.chatboard_home == tmp_path / "chatarch-home/chatboard"
-    assert paths.backend_registry_file == tmp_path / "chatarch-home/chatboard/backends.json"
+    assert paths.backend_profiles_file == tmp_path / "chatarch-home/chatboard/backends.json"
     assert config["chatboard_home"] == tmp_path / "chatarch-home/chatboard"
     assert config["backends_file"] == str(tmp_path / "chatarch-home/chatboard/backends.json")
 

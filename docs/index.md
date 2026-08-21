@@ -14,7 +14,7 @@
 ## Web UI
 
 - 主看板右上角的 Settings 通过同源 server-side proxy 管理 backend profiles；浏览器只选择 profile id，不直接访问 backend URL，也不会保存或发送 backend token。
-- backend registry 和 proxy token 应通过 ChatEnv / `~/.chatarch` 管理：默认 registry 为 `~/.chatarch/chatboard/backends.json`，可用 `CHATBOARD_BACKENDS_FILE` 显式覆盖。
+- backend profile store 应通过 ChatEnv / `~/.chatarch` 管理：默认文件为 `~/.chatarch/chatboard/backends.json`，可用 `CHATBOARD_BACKENDS_FILE` 显式覆盖；backend API token 是单向凭据，只用于 proxy 调用对应 backend。
 
 ## 本地预览
 

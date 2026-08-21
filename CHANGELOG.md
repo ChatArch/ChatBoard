@@ -4,9 +4,9 @@
 
 ### Added
 
-- Add a server-side backend profile registry and proxy so the browser selects backend profiles without receiving backend API tokens.
+- Add a server-side backend profile store and proxy so the browser selects backend profiles without receiving backend API tokens.
 - Support a unique, user-changeable default backend for new sessions, plus session-only current backend switching in Settings.
-- Add registry-token-protected backend profile mutations and redacted token status in Settings.
+- Add server-side backend profile management with redacted token status in Settings; profile edits use the existing authenticated frontend session rather than a separate management token.
 - Add `CHATBOARD_HOME` and `chatbd paths` so operators can verify ChatEnv provider storage and ChatArch-owned runtime paths without printing secrets.
 
 ### Changed

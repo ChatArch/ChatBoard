@@ -59,18 +59,12 @@ class ChatboardConfig(BaseEnvConfig):
 
     CHATBOARD_BACKENDS_FILE = EnvField(
         "CHATBOARD_BACKENDS_FILE",
-        desc="Path to the server-side backend profile registry JSON file.",
+        desc="Path to the server-side backend profile store JSON file.",
     )
 
     CHATBOARD_BACKENDS_JSON = EnvField(
         "CHATBOARD_BACKENDS_JSON",
-        desc="Inline server-side backend profile registry JSON.",
-        is_sensitive=True,
-    )
-
-    CHATBOARD_REGISTRY_TOKEN = EnvField(
-        "CHATBOARD_REGISTRY_TOKEN",
-        desc="Token required for backend registry self-registration or scripted profile writes.",
+        desc="Inline server-side backend profile store JSON.",
         is_sensitive=True,
     )
 
@@ -129,7 +123,7 @@ class ChatboardPaths:
     chatarch_home: Path
     chatenv_provider_dir: Path
     chatboard_home: Path
-    backend_registry_file: Path
+    backend_profiles_file: Path
 
     def safe_summary(self) -> dict[str, str]:
         """Return paths only; no secret values are included."""
@@ -138,7 +132,7 @@ class ChatboardPaths:
             "chatarch_home": str(self.chatarch_home),
             "chatenv_provider_dir": str(self.chatenv_provider_dir),
             "chatboard_home": str(self.chatboard_home),
-            "backend_registry_file": str(self.backend_registry_file),
+            "backend_profiles_file": str(self.backend_profiles_file),
         }
 
 
@@ -158,7 +152,7 @@ def state_paths(*, chatboard_home: str | Path | None = None, backends_file: str 
         chatarch_home=paths.home_dir,
         chatenv_provider_dir=paths.envs_dir / str(ChatboardConfig._storage_dir),
         chatboard_home=home,
-        backend_registry_file=registry,
+        backend_profiles_file=registry,
     )
 
 
@@ -179,9 +173,8 @@ def load_runtime_config() -> dict[str, Any]:
         "default_backend_name": _field_value(ChatboardConfig.CHATBOARD_DEFAULT_BACKEND_NAME) or "default",
         "default_backend_url": default_backend_url,
         "default_backend_token": _field_value(ChatboardConfig.CHATBOARD_DEFAULT_BACKEND_TOKEN) or None,
-        "backends_file": str(resolved_paths.backend_registry_file),
+        "backends_file": str(resolved_paths.backend_profiles_file),
         "backends_json": _field_value(ChatboardConfig.CHATBOARD_BACKENDS_JSON) or None,
-        "registry_token": _field_value(ChatboardConfig.CHATBOARD_REGISTRY_TOKEN) or None,
         "workspace_root": Path(workspace).expanduser().resolve(),
         "username": _field_value(ChatboardConfig.CHATBOARD_USERNAME) or None,
         "password": _field_value(ChatboardConfig.CHATBOARD_PASSWORD) or None,

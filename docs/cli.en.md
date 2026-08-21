@@ -142,7 +142,7 @@ Important derived fields:
 chatbd serve --username admin@example.com --password "[REDACTED]"
 ```
 
-For shared ChatArch environments, prefer a ChatEnv profile so service address, workspace root, browser login credentials, automation API token, backend registry, and server-side proxy token stay separated. The canonical provider is `Chatboard`, and profile files live under `~/.chatarch/envs/Chatboard/<profile>.env`:
+For shared ChatArch environments, prefer a ChatEnv profile so service address, workspace root, browser login credentials, automation API token, backend profile store, and one-way backend API tokens stay separated. The canonical provider is `Chatboard`, and profile files live under `~/.chatarch/envs/Chatboard/<profile>.env`:
 
 ```bash
 cat <<'EOF' | chatenv paste --profile ops --yes --stdin
@@ -169,7 +169,7 @@ Default paths:
 ```text
 ChatEnv profile:      ~/.chatarch/envs/Chatboard/<profile>.env
 ChatBoard state root: ~/.chatarch/chatboard/
-Backend registry:     ~/.chatarch/chatboard/backends.json
+Backend profile store: ~/.chatarch/chatboard/backends.json
 Runtime token store:  ~/.chatarch/tokens/Chatboard/<profile>.json
 ```
 

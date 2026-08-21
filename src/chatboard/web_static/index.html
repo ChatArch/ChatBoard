@@ -86,10 +86,9 @@
           <input id="backendName" type="text" placeholder="LocalBoard / Recall / Cube">
           <label for="backendUrl">API base URL</label>
           <input id="backendUrl" type="url" placeholder="https://localboard.public.wzhecnu.cn">
-          <label for="backendToken">API token (optional)</label>
-          <input id="backendToken" type="password" autocomplete="off" placeholder="Stored server-side after save">
-          <label for="registryToken">Registry token</label>
-          <input id="registryToken" type="password" autocomplete="off" placeholder="Required to add, update, remove, or set default">
+          <label for="backendToken">Backend API token (optional)</label>
+          <input id="backendToken" type="password" autocomplete="off" placeholder="Leave blank to keep saved token">
+          <div class="settings-note">One-way auth: this proxy stores a backend API token only for calls to that backend. Changing it must match the backend's own CHATBOARD_API_KEY, otherwise that backend will stop responding through this proxy.</div>
           <div class="settings-actions">
             <button id="saveBackendBtn" type="button">Save backend</button>
             <button id="removeBackendBtn" class="ghost" type="button">Remove saved</button>
