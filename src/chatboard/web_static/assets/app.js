@@ -13,7 +13,18 @@ const TASK_COLUMN_DEFS = [
   { key: 'done', title: 'Done' },
 ];
 const PAGE_SIZE = 24;
-const state = { catalog: null, activePage: 'projects', selected: null, fullscreen: false, fileExplorerShowAll: false };
+const COLUMN_WIDTH_STORAGE_KEY = 'chatboard.columnWidths.v1';
+const COLUMN_MIN_WEIGHT = 0.45;
+const BOARD_MOBILE_MEDIA = '(max-width: 980px)';
+const state = {
+  catalog: null,
+  activePage: 'projects',
+  selected: null,
+  fullscreen: false,
+  fileExplorerShowAll: false,
+  columnWidths: loadColumnWidthState(),
+  resizing: null,
+};
 
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -31,6 +42,117 @@ function dateLabel(date) {
   const match = String(date || '').match(ISO_DATE_RE);
   if (!match) return date || 'Undated';
   return `${match[2]}-${match[3]}`;
+}
+
+function isMobileBoard() {
+  return window.matchMedia(BOARD_MOBILE_MEDIA).matches;
+}
+
+function loadColumnWidthState() {
+  try {
+    return JSON.parse(localStorage.getItem(COLUMN_WIDTH_STORAGE_KEY) || '{}') || {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function persistColumnWidthState() {
+  try {
+    localStorage.setItem(COLUMN_WIDTH_STORAGE_KEY, JSON.stringify(state.columnWidths));
+  } catch (err) {
+    // Browser storage can be disabled; resizing still works for the session.
+  }
+}
+
+function defaultColumnWeights(columns) {
+  if (state.activePage === 'tasks') return Object.fromEntries(columns.map((column) => [column.key, 1]));
+  const hasCards = (key) => Boolean((columns.find((column) => column.key === key)?.cards || []).length);
+  return {
+    thoughts: hasCards('thoughts') ? 1.1 : 0.55,
+    project: hasCards('project') ? 2.5 : 1,
+    archiving: hasCards('archiving') ? 1 : 0.75,
+    archive: hasCards('archive') ? 1 : 0.75,
+  };
+}
+
+function columnWeights(columns) {
+  const saved = state.columnWidths[state.activePage] || {};
+  const defaults = defaultColumnWeights(columns);
+  return columns.map((column) => Math.max(COLUMN_MIN_WEIGHT, Number(saved[column.key]) || defaults[column.key] || 1));
+}
+
+function applyBoardTemplate(columns = state.catalog?.columns || []) {
+  const board = $('board');
+  if (!board) return;
+  if (isMobileBoard()) {
+    board.style.gridTemplateColumns = '';
+    return;
+  }
+  const weights = columnWeights(columns);
+  board.style.gridTemplateColumns = weights.map((weight) => `minmax(150px, ${weight.toFixed(3)}fr)`).join(' ');
+}
+
+function setColumnWeights(columns, weights) {
+  state.columnWidths[state.activePage] = Object.fromEntries(columns.map((column, index) => [column.key, weights[index]]));
+  applyBoardTemplate(columns);
+}
+
+function resetColumnWidths() {
+  delete state.columnWidths[state.activePage];
+  persistColumnWidthState();
+  applyBoardTemplate();
+}
+
+function startColumnResize(event, columns) {
+  if (isMobileBoard()) return;
+  const index = Number(event.currentTarget.dataset.resizeIndex);
+  if (!Number.isFinite(index) || !columns[index + 1]) return;
+  event.preventDefault();
+  const board = $('board');
+  const weights = columnWeights(columns);
+  const pairTotal = weights[index] + weights[index + 1];
+  state.resizing = {
+    columns,
+    index,
+    startX: event.clientX,
+    startWeights: weights,
+    totalWeight: weights.reduce((total, weight) => total + weight, 0),
+    pairTotal,
+    boardWidth: Math.max(1, board.getBoundingClientRect().width - 16 * Math.max(0, columns.length - 1)),
+  };
+  document.body.classList.add('resizing-columns');
+  document.addEventListener('pointermove', onColumnResize);
+  document.addEventListener('pointerup', stopColumnResize, { once: true });
+}
+
+function onColumnResize(event) {
+  const resize = state.resizing;
+  if (!resize) return;
+  const weights = [...resize.startWeights];
+  const delta = ((event.clientX - resize.startX) / resize.boardWidth) * resize.totalWeight;
+  const maxLeft = Math.max(COLUMN_MIN_WEIGHT, resize.pairTotal - COLUMN_MIN_WEIGHT);
+  const left = Math.min(Math.max(COLUMN_MIN_WEIGHT, resize.startWeights[resize.index] + delta), maxLeft);
+  weights[resize.index] = left;
+  weights[resize.index + 1] = resize.pairTotal - left;
+  setColumnWeights(resize.columns, weights);
+}
+
+function stopColumnResize() {
+  if (!state.resizing) return;
+  state.resizing = null;
+  persistColumnWidthState();
+  document.body.classList.remove('resizing-columns');
+  document.removeEventListener('pointermove', onColumnResize);
+}
+
+function bindColumnResizeHandles(columns) {
+  document.querySelectorAll('[data-resize-index]').forEach((node) => {
+    node.addEventListener('pointerdown', (event) => startColumnResize(event, columns));
+    node.addEventListener('dblclick', (event) => {
+      event.preventDefault();
+      resetColumnWidths();
+    });
+  });
 }
 
 async function api(path, options = {}) {
@@ -212,12 +334,15 @@ function renderCatalog() {
   $('emptyColumns').innerHTML = '';
   $('board').className = 'board';
   if (nonEmpty.length <= 1) $('board').classList.add('mostly-project');
-  $('board').innerHTML = columns.map((column) => `
+  $('board').innerHTML = columns.map((column, index) => `
     <section class="column" data-column="${esc(column.key)}">
+      ${index < columns.length - 1 ? `<button class="column-resize-handle" type="button" data-resize-index="${index}" aria-label="Resize ${esc(column.title)} column" title="Drag to resize columns; double-click to reset widths"></button>` : ''}
       <div class="column-head"><span class="column-title">${esc(column.title)}</span><span class="count">${(column.cards || []).length}${column.has_more ? '+' : ''}</span></div>
       ${columnCardsHtml(column)}
     </section>
   `).join('');
+  applyBoardTemplate(columns);
+  bindColumnResizeHandles(columns);
   document.querySelectorAll('.card').forEach((node) => {
     node.addEventListener('click', () => loadDetail(node.dataset.cardId));
   });
@@ -483,5 +608,6 @@ document.querySelectorAll('[data-close-modal]').forEach((node) => node.addEventL
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && $('detailModal').classList.contains('open')) closeModal();
 });
+window.addEventListener('resize', () => applyBoardTemplate());
 initAuthControls();
 refresh();
