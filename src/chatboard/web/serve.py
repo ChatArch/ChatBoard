@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import click
+from chatstyle import render_heading, render_key_values
 
 from chatboard.config import load_runtime_config
 from chatboard.paths import resolve_workspace_root
@@ -53,6 +54,10 @@ def serve(
         env.setdefault("CHATBOARD_API_KEY", runtime_config["api_key"])
     if runtime_config["auth_secret"]:
         env.setdefault("CHATBOARD_AUTH_SECRET", runtime_config["auth_secret"])
+    if runtime_config["session_ttl_seconds"]:
+        env.setdefault("CHATBOARD_SESSION_TTL_SECONDS", runtime_config["session_ttl_seconds"])
+    if runtime_config["cookie_secure"]:
+        env.setdefault("CHATBOARD_COOKIE_SECURE", runtime_config["cookie_secure"])
     args = [
         sys.executable,
         "-m",
@@ -63,7 +68,12 @@ def serve(
     ]
     if reload:
         args.append("--reload")
-    click.echo(click.style("▶ ChatBoard", bold=True) + f" http://{host}:{port}")
-    click.echo(f"  workspace: {env.get('CHATBOARD_WORKSPACE_ROOT', '~/Playground')}")
-    click.echo(f"  login: {'enabled' if env.get('CHATBOARD_PASSWORD') else 'disabled'}")
+    render_heading("ChatBoard", f"http://{host}:{port}")
+    render_key_values(
+        {
+            "workspace": env.get("CHATBOARD_WORKSPACE_ROOT", "~/Playground"),
+            "login": "enabled" if env.get("CHATBOARD_PASSWORD") else "disabled",
+        },
+        err=True,
+    )
     raise SystemExit(subprocess.call(args, env=env))

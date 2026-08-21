@@ -1,11 +1,9 @@
-"""Server-side backend profile registry and proxy helpers."""
+"""Server-side backend profile store and proxy helpers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-import hmac
 import json
-import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -115,10 +113,6 @@ def save_backend_profiles(profiles: list[BackendProfile]) -> None:
         ],
     }
     file_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    try:
-        os.chmod(file_path, 0o600)
-    except OSError:
-        pass
 
 
 def get_backend_profile(profile_id: str) -> BackendProfile:
@@ -170,11 +164,6 @@ def set_default_backend(profile_id: str) -> BackendProfile:
         raise KeyError(profile_id)
     save_backend_profiles(next_profiles)
     return found
-
-
-def registry_token_is_valid(candidate: str | None) -> bool:
-    expected = load_runtime_config().get("registry_token")
-    return bool(expected) and bool(candidate) and hmac.compare_digest(str(candidate), str(expected))
 
 
 def _profiles_from_config(config: dict[str, Any]) -> list[BackendProfile]:

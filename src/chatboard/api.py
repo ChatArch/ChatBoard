@@ -34,7 +34,6 @@ from chatboard.services.backends import (
     delete_backend_profile,
     get_backend_profile,
     load_backend_profiles,
-    registry_token_is_valid,
     set_default_backend,
     upsert_backend_profile,
 )
@@ -139,12 +138,6 @@ def logout() -> JSONResponse:
     return response
 
 
-def _require_registry_token(request: Request) -> None:
-    token = request.headers.get("X-ChatBoard-Registry-Token")
-    if not registry_token_is_valid(token):
-        raise HTTPException(403, "valid registry token is required")
-
-
 @app.get("/api/backend-profiles")
 def backend_profiles() -> dict[str, Any]:
     profiles = load_backend_profiles()
@@ -152,8 +145,7 @@ def backend_profiles() -> dict[str, Any]:
 
 
 @app.post("/api/backend-profiles")
-def create_backend_profile(request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
-    _require_registry_token(request)
+def create_backend_profile(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
     try:
         profile = upsert_backend_profile(payload)
     except BackendRegistryError as exc:
@@ -162,8 +154,7 @@ def create_backend_profile(request: Request, payload: dict[str, Any] = Body(...)
 
 
 @app.patch("/api/backend-profiles/{profile_id}")
-def patch_backend_profile(profile_id: str, request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
-    _require_registry_token(request)
+def patch_backend_profile(profile_id: str, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
     payload = {**payload, "id": profile_id}
     try:
         profile = upsert_backend_profile(payload)
@@ -173,8 +164,7 @@ def patch_backend_profile(profile_id: str, request: Request, payload: dict[str, 
 
 
 @app.delete("/api/backend-profiles/{profile_id}")
-def remove_backend_profile(profile_id: str, request: Request) -> dict[str, Any]:
-    _require_registry_token(request)
+def remove_backend_profile(profile_id: str) -> dict[str, Any]:
     try:
         delete_backend_profile(profile_id)
     except BackendRegistryError as exc:
@@ -183,8 +173,7 @@ def remove_backend_profile(profile_id: str, request: Request) -> dict[str, Any]:
 
 
 @app.post("/api/backend-profiles/{profile_id}/default")
-def set_default_backend_profile(profile_id: str, request: Request) -> dict[str, Any]:
-    _require_registry_token(request)
+def set_default_backend_profile(profile_id: str) -> dict[str, Any]:
     try:
         profile = set_default_backend(profile_id)
     except KeyError as exc:
@@ -235,7 +224,7 @@ def _proxy_backend_request(
         headers["X-ChatBoard-Token"] = profile.api_key
     req = urllib_request.Request(target, data=body or None, headers=headers, method=method)
     try:
-        with urllib_request.urlopen(req, timeout=8) as upstream:  # noqa: S310 - URL comes from server-side registry.
+        with urllib_request.urlopen(req, timeout=8) as upstream:  # noqa: S310 - URL comes from server-side profiles.
             data = upstream.read()
             return Response(
                 content=data,

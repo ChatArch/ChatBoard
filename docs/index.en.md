@@ -13,8 +13,8 @@ Long-lived documentation for `ChatBoard` lives here.
 
 ## Web UI
 
-- The Settings button in the board header can use this site as the session backend or save other ChatBoard API backend URLs with optional API tokens.
-- A backend that should be read from another ChatBoard frontend origin must opt in with `CHATBOARD_CORS_ORIGINS`.
+- The Settings button in the board header manages backend profiles through the same-origin server-side proxy; browsers select only profile ids and never directly access backend URLs or store/send backend tokens.
+- The backend profile store should be managed through ChatEnv / `~/.chatarch`: the default file is `~/.chatarch/chatboard/backends.json`, with `CHATBOARD_BACKENDS_FILE` as an explicit override. Backend API tokens are one-way credentials used only by the proxy when calling that backend.
 
 ## Local Preview
 

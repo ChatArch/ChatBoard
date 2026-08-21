@@ -12,7 +12,7 @@ license = "MIT"
 dependencies = [
     "click>=8.1,<9.0",
     "chatstyle>=0.2.0,<0.3.0",
-    "chatenv>=0.2.10,<0.3.0",
+    "chatenv>=0.2.11,<0.3.0",
     "fastapi>=0.100",
     "uvicorn>=0.20",
 ]

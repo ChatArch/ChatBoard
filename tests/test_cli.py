@@ -1,3 +1,5 @@
+import json
+
 from click.testing import CliRunner
 
 from chatboard import __version__
@@ -23,6 +25,31 @@ def test_top_level_cli_only_exposes_runtime_and_project_tools():
     assert "discussion" not in result.output
 
 
+def test_paths_reports_chatenv_and_chatarch_owned_paths_without_secrets(tmp_path, monkeypatch):
+    for key in [
+        "CHATBOARD_HOME",
+        "CHATBOARD_BACKENDS_FILE",
+        "CHATBOARD_USERNAME",
+        "CHATBOARD_PASSWORD",
+        "CHATBOARD_API_KEY",
+        "CHATBOARD_DEFAULT_BACKEND_TOKEN",
+    ]:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CHATARCH_HOME", str(tmp_path / ".chatarch"))
+
+    result = CliRunner().invoke(main, ["paths"])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(result.output)
+    assert data["paths"]["chatarch_home"] == str(tmp_path / ".chatarch")
+    assert data["paths"]["chatenv_provider_dir"] == str(tmp_path / ".chatarch/envs/Chatboard")
+    assert data["paths"]["chatboard_home"] == str(tmp_path / ".chatarch/chatboard")
+    assert data["paths"]["backend_profiles_file"] == str(tmp_path / ".chatarch/chatboard/backends.json")
+    assert data["config"]["username_configured"] is False
+    assert "REDACTED" not in result.output
+    assert "secret" not in result.output.lower()
+
+
 def test_tree_shows_registered_project_surface_with_signatures_and_purposes():
     result = CliRunner().invoke(main, ["--tree"])
 
@@ -34,6 +61,7 @@ def test_tree_shows_registered_project_surface_with_signatures_and_purposes():
     assert "--tree  # Print the registered CLI tree and exit." in result.output
     assert "--tree-brief  # Print the registered CLI tree without parameter signatures and exit." in result.output
     assert "serve [--host HOST]" in result.output
+    assert "paths  # Print ChatEnv and ChatArch-owned ChatBoard runtime paths." in result.output
     assert "project  # Inspect and manage ChatArch workspace Projects." in result.output
     assert "task  # Manage Tasks shown on the Tasks board tab." in result.output
     assert "create [TITLE] [--description DESCRIPTION]" in result.output
@@ -59,6 +87,7 @@ def test_tree_brief_keeps_registered_surface_without_parameter_signatures():
 
     assert result.exit_code == 0, result.output
     assert result.output.splitlines()[0] == "chatbd"
+    assert "paths  # Print ChatEnv and ChatArch-owned ChatBoard runtime paths." in result.output
     assert "serve  # Start the ChatBoard web UI." in result.output
     assert "project  # Inspect and manage ChatArch workspace Projects." in result.output
     assert "task  # Manage Tasks shown on the Tasks board tab." in result.output

@@ -13,8 +13,8 @@
 
 ## Web UI
 
-- 主看板右上角的 Settings 可以把当前站点作为本会话 backend，也可以保存其他 ChatBoard API backend URL 和可选 API token。
-- 如果一个 backend 需要被其他站点上的 ChatBoard 前端读取，应在该 backend 服务端配置 `CHATBOARD_CORS_ORIGINS` 允许对应前端来源。
+- 主看板右上角的 Settings 通过同源 server-side proxy 管理 backend profiles；浏览器只选择 profile id，不直接访问 backend URL，也不会保存或发送 backend token。
+- backend profile store 应通过 ChatEnv / `~/.chatarch` 管理：默认文件为 `~/.chatarch/chatboard/backends.json`，可用 `CHATBOARD_BACKENDS_FILE` 显式覆盖；backend API token 是单向凭据，只用于 proxy 调用对应 backend。
 
 ## 本地预览
 

@@ -2,7 +2,7 @@
 
 ## CLI Rules
 
-- Use `chatstyle>=0.2.0,<0.3.0` and `chatenv>=0.2.10,<0.3.0` as the canonical CLI and environment runtime.
+- Use `chatstyle>=0.2.0,<0.3.0` and `chatenv>=0.2.11,<0.3.0` as the canonical CLI and environment runtime.
 - Keep the root command explicitly named `chatbd` and use ChatStyle `add_tree_option()` for `--tree` and `--tree-brief`; do not add a package-local tree renderer.
 - `--tree` must include registered parameter signatures, while `--tree-brief` must preserve the same command hierarchy without signatures.
 - Prefer `CommandSchema`, `CommandField`, `add_interactive_option()`, and `resolve_command_inputs()` for new commands.

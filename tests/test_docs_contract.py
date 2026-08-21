@@ -54,7 +54,7 @@ def test_cli_runtime_dependencies_match_chatarch_standard():
     pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
 
     assert '"chatstyle>=0.2.0,<0.3.0"' in pyproject
-    assert '"chatenv>=0.2.10,<0.3.0"' in pyproject
+    assert '"chatenv>=0.2.11,<0.3.0"' in pyproject
 
 
 def test_docs_home_links_to_public_docs_and_github_project():

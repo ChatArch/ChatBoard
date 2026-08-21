@@ -176,7 +176,6 @@ def test_index_injects_default_backend_from_environment(monkeypatch):
 def test_backend_profiles_are_redacted_and_default_is_unique(tmp_path, monkeypatch):
     registry = tmp_path / "backends.json"
     monkeypatch.setenv("CHATBOARD_BACKENDS_FILE", str(registry))
-    monkeypatch.setenv("CHATBOARD_REGISTRY_TOKEN", "registry-token")
     save_backend_profiles(
         [
             BackendProfile(id="default", name="Mini", url="172.25.236.90:8010", api_key="secret-a", is_default=True),
@@ -193,10 +192,7 @@ def test_backend_profiles_are_redacted_and_default_is_unique(tmp_path, monkeypat
     assert data[0]["has_token"] is True
     assert "secret-a" not in profiles.text
 
-    denied = client.post("/api/backend-profiles/other/default")
-    assert denied.status_code == 403
-
-    allowed = client.post("/api/backend-profiles/other/default", headers={"X-ChatBoard-Registry-Token": "registry-token"})
+    allowed = client.post("/api/backend-profiles/other/default")
     assert allowed.status_code == 200
     assert allowed.json()["profile"]["is_default"] is True
     assert [profile.id for profile in load_backend_profiles() if profile.is_default] == ["other"]
@@ -207,7 +203,7 @@ def test_backend_url_builder_accepts_ip_port_and_api_prefix():
     assert backend_api_url("https://example.test/api", "/api/health") == "https://example.test/api/health"
 
 
-def test_backend_proxy_uses_registry_token_without_exposing_secret(tmp_path, monkeypatch):
+def test_backend_proxy_uses_backend_token_without_exposing_secret(tmp_path, monkeypatch):
     registry = tmp_path / "backends.json"
     monkeypatch.setenv("CHATBOARD_BACKENDS_FILE", str(registry))
     save_backend_profiles(
@@ -272,13 +268,16 @@ def test_board_static_assets_support_backend_switching():
     assert "chatboard.activeBackend.v1" in app_js
     assert "DEFAULT_BACKEND_ID = 'default'" in app_js
     assert "loadBackendProfiles" in app_js
-    assert "X-ChatBoard-Registry-Token" in app_js
+    assert "X-ChatBoard-Registry-Token" not in app_js
+    assert "registryToken" not in app_js
     assert "/api/backends/" in app_js
     assert "localStorage.setItem(BACKEND_STORAGE_KEY" not in app_js
     assert "X-ChatBoard-Token" not in app_js
-    assert "Token is configured; enter a new token to replace" in app_js
-    assert "sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY" in app_js
-    assert "Use for session" in Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
+    assert "Token configured; leave blank to keep it" in app_js
+    index_html = Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
+    assert "Registry token" not in index_html
+    assert "One-way auth" in index_html
+    assert "Use for session" in index_html
     assert ".resource-nav a" in styles
     assert "text-decoration: none !important" in styles
     assert ".settings-panel" in styles

@@ -124,6 +124,34 @@ def main() -> None:
     """Run the ChatBoard web app and Project management tools."""
 
 
+@main.command("paths")
+def paths_command() -> None:
+    """Print ChatEnv and ChatArch-owned ChatBoard runtime paths."""
+
+    from chatboard.config import load_runtime_config, state_paths
+
+    config = load_runtime_config()
+    paths = state_paths(chatboard_home=config["chatboard_home"], backends_file=config["backends_file"])
+    _json(
+        {
+            "paths": paths.safe_summary(),
+            "config": {
+                "service_url": config["service_url"],
+                "workspace_root": str(config["workspace_root"]),
+                "default_backend_name": config["default_backend_name"],
+                "default_backend_url": config["default_backend_url"],
+                "username_configured": bool(config["username"]),
+                "password_configured": bool(config["password"]),
+                "api_key_configured": bool(config["api_key"]),
+                "default_backend_token_configured": bool(config["default_backend_token"]),
+                "backends_json_configured": bool(config["backends_json"]),
+                "session_ttl_seconds": config["session_ttl_seconds"],
+                "cookie_secure_configured": bool(config["cookie_secure"]),
+            },
+        }
+    )
+
+
 @main.command()
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host to bind.")
 @click.option("--port", default=8000, show_default=True, type=int, help="Port to bind.")
