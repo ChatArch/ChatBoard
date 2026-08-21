@@ -8,13 +8,15 @@
 </head>
 <body>
   <header class="topbar">
-    <div>
+    <div class="brand-block">
       <p class="eyebrow">ChatArch Workspace</p>
       <h1>ChatBoard</h1>
+      <nav class="resource-nav" aria-label="ChatBoard resources">
+        <a class="resource-link" href="https://arch.gh.wzhecnu.cn/ChatBoard/" target="_blank" rel="noopener noreferrer"><span>Docs</span><small>Guide and CLI</small></a>
+        <a class="resource-link" href="https://github.com/ChatArch/ChatBoard" target="_blank" rel="noopener noreferrer"><span>GitHub</span><small>Source and issues</small></a>
+      </nav>
     </div>
     <div class="actions">
-      <a class="resource-link ghost" href="https://arch.gh.wzhecnu.cn/ChatBoard/" target="_blank" rel="noopener noreferrer">Docs</a>
-      <a class="resource-link" href="https://github.com/ChatArch/ChatBoard" target="_blank" rel="noopener noreferrer">GitHub</a>
       <label class="ensure"><input id="ensureCards" type="checkbox"> ensure card.md</label>
       <button id="refreshBtn">Refresh</button>
       <button id="logoutBtn" class="ghost" type="button" hidden>Logout</button>
