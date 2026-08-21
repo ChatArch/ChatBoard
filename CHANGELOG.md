@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+No changes yet.
+
+## 0.1.9 - 2026-08-21
+
 ### Added
 
 - Add a Web Settings backend switcher so one ChatBoard frontend can read the current site or saved remote API backends for the browser session.
