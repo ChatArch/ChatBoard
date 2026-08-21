@@ -2,17 +2,23 @@
 
 ## Unreleased
 
+No changes yet.
+
+## 0.1.7 - 2026-08-21
+
 ### Added
 
 - Add a separate Tasks board tab and task card metadata (`type: task`, source, accept mode, side-effect level, and next action) without changing the legacy Projects board projection.
 - Add task-management REST APIs: `/api/pages`, `/api/tasks`, `/api/tasks/{id}/status`, `/api/tasks/{id}/transitions`, and task soft-delete.
 - Add `chatbd project task create/list/status/update/transition/delete` for task CRUD, status inspection, stage migration, and soft-delete.
 - Add ChatEnv-aligned access control fields (`CHATBOARD_SERVICE_URL`, username/password, API key) and a `chatenv token refresh Chatboard <profile>` runtime token provider for browser-login cookies.
+- Add Docs and GitHub resource links to the board, login page, and MkDocs home pages.
 
 ### Changed
 
 - Keep `project scan`, `project catalog`, and `/api/catalog` focused on legacy Project cards; task cards are listed through the new Tasks tab/API/CLI.
-- Accept `Authorization: Bearer ...` and `X-ChatBoard-Token` for workspace API automation when `CHATBOARD_API_KEY` is configured.
+- Accept `Authorization: Bearer <token>` and `X-ChatBoard-Token` for workspace API automation when `CHATBOARD_API_KEY` is configured.
+- Style public resource links as subtle glass cards so they fit the warm ChatBoard UI without competing with primary actions.
 
 ### Removed
 
