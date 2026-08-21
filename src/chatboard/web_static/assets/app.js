@@ -160,7 +160,8 @@ function bindColumnResizeHandles(columns) {
 }
 
 function currentSiteBackend() {
-  return { id: 'current', name: 'This site', url: window.location.origin, token: '', builtin: true };
+  const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : window.location.href;
+  return { id: 'current', name: 'This site', url: origin, token: '', builtin: true };
 }
 
 function normalizeBackendUrl(value) {
@@ -175,7 +176,16 @@ function loadBackendState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(BACKEND_STORAGE_KEY) || '{}') || {};
     const backends = Array.isArray(parsed.backends) ? parsed.backends : [];
-    return { backends: backends.filter((backend) => backend && backend.id && backend.url) };
+    return {
+      backends: backends.reduce((items, backend) => {
+        try {
+          if (backend && backend.id && backend.url) items.push({ ...backend, url: normalizeBackendUrl(backend.url) });
+        } catch (err) {
+          // Ignore invalid saved URLs so Settings can always open.
+        }
+        return items;
+      }, []),
+    };
   } catch (err) {
     return { backends: [] };
   }
@@ -226,11 +236,17 @@ function backendHeaders(backend, options = {}) {
   return headers;
 }
 
+function backendCredentials(backend, options = {}) {
+  if (options.credentials) return options.credentials;
+  if (backend.token) return 'omit';
+  return normalizeBackendUrl(backend.url) === normalizeBackendUrl(window.location.origin) ? 'same-origin' : 'include';
+}
+
 async function api(path, options = {}) {
   const backend = activeBackend();
   const response = await fetch(backendApiUrl(path, backend), {
     ...options,
-    credentials: options.credentials || (backend.token ? 'same-origin' : 'include'),
+    credentials: backendCredentials(backend, options),
     headers: backendHeaders(backend, options),
   });
   if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
@@ -286,11 +302,18 @@ function renderBackendSelect() {
 }
 
 function openSettings() {
-  renderBackendSelect();
-  setBackendStatus('Current site is always available and is the default for new sessions. Saved tokens stay in this browser.');
   $('settingsModal').classList.add('open');
   $('settingsModal').setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
+  try {
+    renderBackendSelect();
+    setBackendStatus('Current site is always available and is the default for new sessions. Saved tokens stay in this browser.');
+  } catch (err) {
+    state.backends.backends = [];
+    persistBackendState();
+    renderBackendSelect();
+    setBackendStatus('Saved backend settings were invalid and have been reset for this browser.', true);
+  }
 }
 
 function closeSettings() {
@@ -365,7 +388,7 @@ async function testBackendFromForm() {
   setBackendStatus('Checking backend health...');
   try {
     const response = await fetch(backendApiUrl('/api/health', candidate), {
-      credentials: candidate.token ? 'same-origin' : 'include',
+      credentials: backendCredentials(candidate),
       headers: backendHeaders(candidate),
     });
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);

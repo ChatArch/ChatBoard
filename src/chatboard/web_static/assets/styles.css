@@ -32,7 +32,8 @@ body.modal-open { overflow: hidden; }
 h1 { margin: 0; font-size: clamp(34px, 4vw, 58px); letter-spacing: -.045em; }
 .brand-block { min-width: min(100%, 520px); }
 .resource-nav { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; font-family: ui-sans-serif, system-ui; }
-.resource-link {
+.resource-link,
+.resource-nav a {
   display: grid;
   gap: 2px;
   min-width: 132px;
@@ -41,12 +42,17 @@ h1 { margin: 0; font-size: clamp(34px, 4vw, 58px); letter-spacing: -.045em; }
   color: var(--ink);
   border-radius: 16px;
   padding: 10px 13px;
-  text-decoration: none;
+  text-decoration: none !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
 }
-.resource-link span { color: var(--accent); font-weight: 900; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
-.resource-link small { color: var(--muted); font-size: 11px; line-height: 1.2; }
-.resource-link:hover { border-color: rgba(35, 105, 91, .42); background: rgba(255, 250, 241, .74); }
+.resource-link:visited,
+.resource-nav a:visited { color: var(--ink); }
+.resource-link span,
+.resource-nav a span { color: var(--accent); font-weight: 900; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+.resource-link small,
+.resource-nav a small { color: var(--muted); font-size: 11px; line-height: 1.2; }
+.resource-link:hover,
+.resource-nav a:hover { border-color: rgba(35, 105, 91, .42); background: rgba(255, 250, 241, .74); }
 .actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end; font-family: ui-sans-serif, system-ui; }
 button {
   border: 1px solid var(--accent);
@@ -188,6 +194,7 @@ body.resizing-columns * { cursor: col-resize !important; }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
 .settings-actions button { padding: 8px 12px; font-size: 12px; }
 .settings-link { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,250,241,.72); color: var(--accent); padding: 8px 12px; font: 800 12px/1 ui-sans-serif, system-ui; text-decoration: none; }
+.settings-build-note { display: inline-flex; margin-top: 9px; border: 1px solid rgba(35,105,91,.18); border-radius: 999px; background: rgba(217,235,230,.48); color: var(--accent); padding: 5px 9px; font: 800 11px/1.2 ui-sans-serif, system-ui; letter-spacing: .04em; text-transform: uppercase; }
 .settings-note { color: var(--muted); font: 12px/1.45 ui-sans-serif, system-ui; }
 .error-text { color: var(--danger); }
 pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: #2a2d27; font: 12px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
