@@ -67,6 +67,11 @@ app = FastAPI(title="ChatBoard API", version=__version__)
 _install_cors(app)
 
 _PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
+_PUBLIC_AUTH_PREFIXES = ("/assets/",)
+
+
+def _is_public_auth_path(path: str) -> bool:
+    return path in _PUBLIC_AUTH_PATHS or any(path.startswith(prefix) for prefix in _PUBLIC_AUTH_PREFIXES)
 
 
 @app.middleware("http")
@@ -74,7 +79,7 @@ async def require_login(request: Request, call_next):  # type: ignore[no-untyped
     if request.method == "OPTIONS":
         return await call_next(request)
     auth_required = auth_enabled() or (api_token_enabled() and request.url.path.startswith("/api/"))
-    if not auth_required or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
+    if not auth_required or _is_public_auth_path(request.url.path) or request_is_authenticated(request):
         return await call_next(request)
     if request.url.path.startswith("/api/"):
         return JSONResponse({"detail": "authentication required"}, status_code=401)

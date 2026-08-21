@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from chatboard.api import _cors_origins, app
+from chatboard.api import _cors_origins, _is_public_auth_path, app
 
 
 def _project(root: Path) -> None:
@@ -176,7 +176,9 @@ def test_board_static_assets_support_backend_switching():
     assert "chatboard.backends.v1" in app_js
     assert "chatboard.activeBackend.v1" in app_js
     assert "backendApiUrl" in app_js
+    assert "backendCredentials" in app_js
     assert "X-ChatBoard-Token" in app_js
+    assert "Ignore invalid saved URLs so Settings can always open" in app_js
     assert "sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY" in app_js
     assert "localStorage.setItem(BACKEND_STORAGE_KEY" in app_js
     assert "Use for session" in Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
@@ -189,6 +191,13 @@ def test_cors_origin_parser_trims_comma_separated_origins():
         "https://front.example",
         "https://board.example",
     ]
+
+
+def test_public_auth_paths_include_static_assets():
+    assert _is_public_auth_path("/assets/app.js")
+    assert _is_public_auth_path("/assets/styles.css")
+    assert _is_public_auth_path("/login")
+    assert not _is_public_auth_path("/api/catalog")
 
 
 def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path):
@@ -418,6 +427,16 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
     assert 'href="https://github.com/ChatArch/ChatBoard"' in login_page.text
     assert 'type="text"' in login_page.text
     assert 'type="email"' not in login_page.text
+
+    styles = client.get("/assets/styles.css", follow_redirects=False)
+    assert styles.status_code == 200
+    assert "text/css" in styles.headers["content-type"]
+    assert ".resource-link" in styles.text
+
+    script = client.get("/assets/app.js", follow_redirects=False)
+    assert script.status_code == 200
+    assert "javascript" in script.headers["content-type"]
+    assert "settingsBtn" in script.text
 
     blocked = client.get("/api/catalog", params={"root": str(tmp_path)})
     assert blocked.status_code == 401

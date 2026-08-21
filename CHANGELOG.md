@@ -10,6 +10,11 @@
 
 - Support opt-in cross-origin backend access with `CHATBOARD_CORS_ORIGINS`.
 
+### Fixed
+
+- Keep `/assets/*` public while auth is enabled so the login page and board load CSS/JS instead of redirected HTML.
+- Make the Settings modal resilient to invalid saved backend entries so the dialog can still open and reset them.
+
 ## 0.1.8 - 2026-08-21
 
 ### Added
