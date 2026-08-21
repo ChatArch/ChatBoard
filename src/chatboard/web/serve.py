@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 import click
+from chatstyle import render_heading, render_key_values
 
 from chatboard.config import load_runtime_config
 from chatboard.paths import resolve_workspace_root
@@ -67,7 +68,12 @@ def serve(
     ]
     if reload:
         args.append("--reload")
-    click.echo(click.style("▶ ChatBoard", bold=True) + f" http://{host}:{port}")
-    click.echo(f"  workspace: {env.get('CHATBOARD_WORKSPACE_ROOT', '~/Playground')}")
-    click.echo(f"  login: {'enabled' if env.get('CHATBOARD_PASSWORD') else 'disabled'}")
+    render_heading("ChatBoard", f"http://{host}:{port}")
+    render_key_values(
+        {
+            "workspace": env.get("CHATBOARD_WORKSPACE_ROOT", "~/Playground"),
+            "login": "enabled" if env.get("CHATBOARD_PASSWORD") else "disabled",
+        },
+        err=True,
+    )
     raise SystemExit(subprocess.call(args, env=env))
