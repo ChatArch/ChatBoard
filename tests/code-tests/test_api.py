@@ -148,6 +148,9 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert 'data-page-tab="tasks"' in index.text
     assert 'id="settingsBtn"' in index.text
     assert 'id="settingsModal"' in index.text
+    assert '/assets/styles.css?v=settings-assets-review-2' in index.text
+    assert '/assets/app.js?v=settings-assets-review-2' in index.text
+    assert 'settings-build-note' in index.text
     assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in index.text
     assert 'href="https://github.com/ChatArch/ChatBoard"' in index.text
     assert 'data-page-tab="machines"' not in index.text
@@ -182,7 +185,10 @@ def test_board_static_assets_support_backend_switching():
     assert "sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY" in app_js
     assert "localStorage.setItem(BACKEND_STORAGE_KEY" in app_js
     assert "Use for session" in Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
+    assert ".resource-nav a" in styles
+    assert "text-decoration: none !important" in styles
     assert ".settings-panel" in styles
+    assert ".settings-build-note" in styles
     assert ".backend-active-summary" in styles
 
 
