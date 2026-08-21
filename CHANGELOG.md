@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Add a Web Settings backend switcher so one ChatBoard frontend can read the current site or saved remote API backends for the browser session.
+
+### Changed
+
+- Support opt-in cross-origin backend access with `CHATBOARD_CORS_ORIGINS`.
+
 ## 0.1.8 - 2026-08-21
 
 ### Added
@@ -29,7 +37,7 @@
 ### Changed
 
 - Keep `project scan`, `project catalog`, and `/api/catalog` focused on legacy Project cards; task cards are listed through the new Tasks tab/API/CLI.
-- Accept `Authorization: Bearer <token>` and `X-ChatBoard-Token` for workspace API automation when `CHATBOARD_API_KEY` is configured.
+- Accept the Authorization header and `X-ChatBoard-Token` for workspace API automation when `CHATBOARD_API_KEY` is configured.
 - Style public resource links as subtle glass cards so they fit the warm ChatBoard UI without competing with primary actions.
 
 ### Removed

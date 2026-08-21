@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -43,13 +44,35 @@ from chatboard.services.workspace import catalog as build_catalog
 from chatboard.services.workspace import column_page as build_column_page
 from chatboard.web.paths import package_static_dir
 
+
+def _cors_origins(raw: str | None = None) -> list[str]:
+    value = os.environ.get("CHATBOARD_CORS_ORIGINS", "") if raw is None else raw
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+
+def _install_cors(app: FastAPI) -> None:
+    origins = _cors_origins()
+    if not origins:
+        return
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials="*" not in origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
 app = FastAPI(title="ChatBoard API", version=__version__)
+_install_cors(app)
 
 _PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
 
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):  # type: ignore[no-untyped-def]
+    if request.method == "OPTIONS":
+        return await call_next(request)
     auth_required = auth_enabled() or (api_token_enabled() and request.url.path.startswith("/api/"))
     if not auth_required or request.url.path in _PUBLIC_AUTH_PATHS or request_is_authenticated(request):
         return await call_next(request)

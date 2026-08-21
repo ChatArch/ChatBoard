@@ -4,7 +4,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from chatboard.api import app
+from chatboard.api import _cors_origins, app
 
 
 def _project(root: Path) -> None:
@@ -146,6 +146,8 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert index.status_code == 200
     assert 'data-page-tab="projects"' in index.text
     assert 'data-page-tab="tasks"' in index.text
+    assert 'id="settingsBtn"' in index.text
+    assert 'id="settingsModal"' in index.text
     assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in index.text
     assert 'href="https://github.com/ChatArch/ChatBoard"' in index.text
     assert 'data-page-tab="machines"' not in index.text
@@ -165,6 +167,28 @@ def test_board_static_assets_support_resizable_columns():
     assert ".column-resize-handle" in styles
     assert "body.resizing-columns" in styles
     assert ".board.mostly-project { grid-template-columns" not in styles
+
+
+def test_board_static_assets_support_backend_switching():
+    app_js = Path("src/chatboard/web_static/assets/app.js").read_text(encoding="utf-8")
+    styles = Path("src/chatboard/web_static/assets/styles.css").read_text(encoding="utf-8")
+
+    assert "chatboard.backends.v1" in app_js
+    assert "chatboard.activeBackend.v1" in app_js
+    assert "backendApiUrl" in app_js
+    assert "X-ChatBoard-Token" in app_js
+    assert "sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY" in app_js
+    assert "localStorage.setItem(BACKEND_STORAGE_KEY" in app_js
+    assert "Use for session" in Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
+    assert ".settings-panel" in styles
+    assert ".backend-active-summary" in styles
+
+
+def test_cors_origin_parser_trims_comma_separated_origins():
+    assert _cors_origins(" https://front.example , https://board.example ,, ") == [
+        "https://front.example",
+        "https://board.example",
+    ]
 
 
 def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path):

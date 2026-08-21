@@ -18,6 +18,7 @@
     </div>
     <div class="actions">
       <label class="ensure"><input id="ensureCards" type="checkbox"> ensure card.md</label>
+      <button id="settingsBtn" class="ghost" type="button">Settings</button>
       <button id="refreshBtn">Refresh</button>
       <button id="logoutBtn" class="ghost" type="button" hidden>Logout</button>
     </div>
@@ -48,6 +49,47 @@
         </div>
       </header>
       <div id="detailBody" class="detail-body"></div>
+    </article>
+  </div>
+  <div id="settingsModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop" data-close-settings></div>
+    <article class="detail-panel settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <header class="detail-head">
+        <div>
+          <p class="eyebrow">Session Backend</p>
+          <h2 id="settingsTitle">Settings</h2>
+          <div class="detail-path">Choose which ChatBoard API this frontend reads for the current browser session.</div>
+        </div>
+        <button id="closeSettingsBtn" class="ghost" type="button">Close</button>
+      </header>
+      <div class="settings-body">
+        <section class="section settings-section">
+          <h3>Active Backend</h3>
+          <div id="backendActiveSummary" class="backend-active-summary">This site</div>
+          <label for="backendSelect">Saved backends</label>
+          <select id="backendSelect"><option value="current">This site — current browser origin</option></select>
+          <div class="settings-actions">
+            <button id="useBackendBtn" type="button">Use for session</button>
+            <button id="useCurrentBackendBtn" class="ghost" type="button">Use this site for session</button>
+            <a id="openBackendLink" class="settings-link" href="/" target="_blank" rel="noopener noreferrer">Open backend</a>
+          </div>
+        </section>
+        <section class="section settings-section">
+          <h3>Add or Edit Backend</h3>
+          <label for="backendName">Name</label>
+          <input id="backendName" type="text" placeholder="LocalBoard / Recall / Cube">
+          <label for="backendUrl">API base URL</label>
+          <input id="backendUrl" type="url" placeholder="https://localboard.public.wzhecnu.cn">
+          <label for="backendToken">API token (optional)</label>
+          <input id="backendToken" type="password" autocomplete="off" placeholder="Stored only in this browser">
+          <div class="settings-actions">
+            <button id="saveBackendBtn" type="button">Save backend</button>
+            <button id="removeBackendBtn" class="ghost" type="button">Remove saved</button>
+            <button id="testBackendBtn" class="ghost" type="button">Test health</button>
+          </div>
+          <div id="backendSettingsStatus" class="settings-note">Current site is always available and is the default for new sessions.</div>
+        </section>
+      </div>
     </article>
   </div>
   <script src="/assets/app.js"></script>
