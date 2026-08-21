@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Add draggable board column resizing with browser-local persistence and double-click reset.
+
+### Changed
+
+- Fix the default Projects board column weights so an empty `想法` / `thoughts` column no longer receives the largest track.
 
 ## 0.1.7 - 2026-08-21
 

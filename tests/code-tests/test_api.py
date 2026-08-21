@@ -151,6 +151,22 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert 'data-page-tab="machines"' not in index.text
 
 
+def test_board_static_assets_support_resizable_columns():
+    app_js = Path("src/chatboard/web_static/assets/app.js").read_text(encoding="utf-8")
+    styles = Path("src/chatboard/web_static/assets/styles.css").read_text(encoding="utf-8")
+
+    assert "chatboard.columnWidths.v1" in app_js
+    assert "column-resize-handle" in app_js
+    assert "data-resize-index" in app_js
+    assert "gridTemplateColumns" in app_js
+    assert "double-click to reset widths" in app_js
+    assert "thoughts: hasCards('thoughts') ? 1.1 : 0.55" in app_js
+    assert "project: hasCards('project') ? 2.5 : 1" in app_js
+    assert ".column-resize-handle" in styles
+    assert "body.resizing-columns" in styles
+    assert ".board.mostly-project { grid-template-columns" not in styles
+
+
 def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path):
     client = TestClient(app)
 
