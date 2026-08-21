@@ -25,3 +25,13 @@ def test_cli_docs_are_bilingual_and_use_public_command():
     assert "chatbd --tree" in en
     assert "python -m chatboard.cli" not in zh
     assert "python -m chatboard.cli" not in en
+
+
+def test_docs_home_links_to_public_docs_and_github_project():
+    zh = Path("docs/index.md").read_text(encoding="utf-8")
+    en = Path("docs/index.en.md").read_text(encoding="utf-8")
+
+    assert "https://github.com/ChatArch/ChatBoard" in zh
+    assert "https://github.com/ChatArch/ChatBoard" in en
+    assert "https://arch.gh.wzhecnu.cn/ChatBoard/en/" in zh
+    assert "https://arch.gh.wzhecnu.cn/ChatBoard/" in en

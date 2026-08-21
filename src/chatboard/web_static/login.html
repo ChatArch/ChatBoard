@@ -59,6 +59,9 @@
     .eyebrow { margin: 0 0 8px; color: var(--accent); font: 800 12px/1.2 ui-sans-serif, system-ui; letter-spacing: .15em; text-transform: uppercase; }
     h1 { margin: 0; max-width: 10ch; font-size: clamp(44px, 8vw, 88px); line-height: .86; letter-spacing: -.065em; }
     .hero p:last-child { position: relative; z-index: 1; max-width: 34rem; color: var(--muted); font: 15px/1.55 ui-sans-serif, system-ui; margin: 34px 0 0; }
+    .hero-links { position: relative; z-index: 1; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; font-family: ui-sans-serif, system-ui; }
+    .hero-link { border: 1px solid var(--accent); border-radius: 999px; background: var(--accent); color: white; padding: 10px 15px; font: 800 13px/1 ui-sans-serif, system-ui; text-decoration: none; }
+    .hero-link.ghost { background: rgba(255,250,241,.72); color: var(--accent); }
     .panel { padding: 26px; align-self: center; }
     .panel h2 { margin: 0 0 8px; font-size: 30px; letter-spacing: -.04em; }
     .panel p { margin: 0 0 22px; color: var(--muted); font: 14px/1.5 ui-sans-serif, system-ui; }
@@ -100,6 +103,10 @@
       <div>
         <p class="eyebrow">ChatArch Workspace</p>
         <h1>ChatBoard</h1>
+        <nav class="hero-links" aria-label="ChatBoard resources">
+          <a class="hero-link ghost" href="https://arch.gh.wzhecnu.cn/ChatBoard/" target="_blank" rel="noopener noreferrer">Docs</a>
+          <a class="hero-link" href="https://github.com/ChatArch/ChatBoard" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </nav>
       </div>
       <p>Workspace cards can expose local project paths, reports, and lifecycle controls. Sign in before opening this board.</p>
     </section>

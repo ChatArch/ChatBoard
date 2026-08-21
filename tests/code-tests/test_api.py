@@ -146,6 +146,8 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert index.status_code == 200
     assert 'data-page-tab="projects"' in index.text
     assert 'data-page-tab="tasks"' in index.text
+    assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in index.text
+    assert 'href="https://github.com/ChatArch/ChatBoard"' in index.text
     assert 'data-page-tab="machines"' not in index.text
 
 
@@ -372,6 +374,8 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
     login_page = client.get("/login")
     assert login_page.status_code == 200
     assert "ChatBoard Login" in login_page.text
+    assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in login_page.text
+    assert 'href="https://github.com/ChatArch/ChatBoard"' in login_page.text
     assert 'type="text"' in login_page.text
     assert 'type="email"' not in login_page.text
 

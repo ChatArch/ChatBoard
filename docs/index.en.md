@@ -6,6 +6,11 @@ Long-lived documentation for `ChatBoard` lives here.
 
 - [CLI reference](cli.md): command tree, side effects, and `ensure` derivation rules.
 
+## Project Links
+
+[GitHub Project](https://github.com/ChatArch/ChatBoard){ .md-button .md-button--primary }
+[Chinese Docs](https://arch.gh.wzhecnu.cn/ChatBoard/){ .md-button }
+
 ## Local Preview
 
 ```bash
