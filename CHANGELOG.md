@@ -2,13 +2,22 @@
 
 ## Unreleased
 
-No changes yet.
+### Added
+
+- Add a server-side backend profile registry and proxy so the browser selects backend profiles without receiving backend API tokens.
+- Support a unique, user-changeable default backend for new sessions, plus session-only current backend switching in Settings.
+- Add registry-token-protected backend profile mutations and redacted token status in Settings.
+
+### Changed
+
+- Route board API calls through `/api/backends/{profile}/api/...` so backend URLs are resolved by the frontend/proxy service host.
 
 ## 0.1.9 - 2026-08-21
 
 ### Added
 
 - Add a Web Settings backend switcher so one ChatBoard frontend can read the current site or saved remote API backends for the browser session.
+- Inject the default backend profile from ChatEnv/runtime config and keep configured backend tokens masked in Settings.
 
 ### Changed
 

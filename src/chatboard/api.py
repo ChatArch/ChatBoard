@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import os
+from html import escape
 from pathlib import Path
 from typing import Any
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from chatboard import __version__
@@ -21,9 +24,20 @@ from chatboard.auth import (
     set_session_cookie,
     verify_credentials,
 )
+from chatboard.config import load_runtime_config
 from chatboard.models import VISIBLE_COLUMN_KEYS
 from chatboard.paths import resolve_workspace_root
 from chatboard.services import archive as archive_service
+from chatboard.services.backends import (
+    BackendRegistryError,
+    backend_api_url,
+    delete_backend_profile,
+    get_backend_profile,
+    load_backend_profiles,
+    registry_token_is_valid,
+    set_default_backend,
+    upsert_backend_profile,
+)
 from chatboard.services import discussion as discussion_service
 from chatboard.services.cards import (
     card_detail,
@@ -123,6 +137,119 @@ def logout() -> JSONResponse:
     response = JSONResponse({"ok": True})
     clear_session_cookie(response)
     return response
+
+
+def _require_registry_token(request: Request) -> None:
+    token = request.headers.get("X-ChatBoard-Registry-Token")
+    if not registry_token_is_valid(token):
+        raise HTTPException(403, "valid registry token is required")
+
+
+@app.get("/api/backend-profiles")
+def backend_profiles() -> dict[str, Any]:
+    profiles = load_backend_profiles()
+    return {"profiles": [profile.redacted() for profile in profiles]}
+
+
+@app.post("/api/backend-profiles")
+def create_backend_profile(request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    _require_registry_token(request)
+    try:
+        profile = upsert_backend_profile(payload)
+    except BackendRegistryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"profile": profile.redacted()}
+
+
+@app.patch("/api/backend-profiles/{profile_id}")
+def patch_backend_profile(profile_id: str, request: Request, payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
+    _require_registry_token(request)
+    payload = {**payload, "id": profile_id}
+    try:
+        profile = upsert_backend_profile(payload)
+    except BackendRegistryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"profile": profile.redacted()}
+
+
+@app.delete("/api/backend-profiles/{profile_id}")
+def remove_backend_profile(profile_id: str, request: Request) -> dict[str, Any]:
+    _require_registry_token(request)
+    try:
+        delete_backend_profile(profile_id)
+    except BackendRegistryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True}
+
+
+@app.post("/api/backend-profiles/{profile_id}/default")
+def set_default_backend_profile(profile_id: str, request: Request) -> dict[str, Any]:
+    _require_registry_token(request)
+    try:
+        profile = set_default_backend(profile_id)
+    except KeyError as exc:
+        raise HTTPException(404, f"backend not found: {profile_id}") from exc
+    return {"profile": profile.redacted()}
+
+
+@app.post("/api/backend-profiles/{profile_id}/health")
+def backend_profile_health(profile_id: str) -> dict[str, Any]:
+    try:
+        profile = get_backend_profile(profile_id)
+    except KeyError as exc:
+        raise HTTPException(404, f"backend not found: {profile_id}") from exc
+    response = _proxy_backend_request(profile.id, "GET", "health", b"", "")
+    try:
+        content = response.body.decode("utf-8") if isinstance(response.body, bytes) else str(response.body)
+    except Exception:
+        content = ""
+    return {"backend": profile.redacted(), "status_code": response.status_code, "body": content}
+
+
+@app.api_route("/api/backends/{profile_id}/api/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+async def proxy_backend_api(profile_id: str, path: str, request: Request) -> Response:
+    body = await request.body()
+    return _proxy_backend_request(profile_id, request.method, path, body, request.url.query, request.headers.get("content-type"))
+
+
+def _proxy_backend_request(
+    profile_id: str,
+    method: str,
+    path: str,
+    body: bytes,
+    query: str,
+    content_type: str | None = None,
+) -> Response:
+    try:
+        profile = get_backend_profile(profile_id)
+    except KeyError as exc:
+        raise HTTPException(404, f"backend not found: {profile_id}") from exc
+    api_path = f"/api/{path}" if path else "/api"
+    target = backend_api_url(profile.url, api_path)
+    if query:
+        target = f"{target}?{query}"
+    headers = {"accept": "application/json"}
+    if content_type:
+        headers["content-type"] = content_type
+    if profile.api_key:
+        headers["X-ChatBoard-Token"] = profile.api_key
+    req = urllib_request.Request(target, data=body or None, headers=headers, method=method)
+    try:
+        with urllib_request.urlopen(req, timeout=8) as upstream:  # noqa: S310 - URL comes from server-side registry.
+            data = upstream.read()
+            return Response(
+                content=data,
+                status_code=int(upstream.status),
+                media_type=upstream.headers.get("content-type") or "application/json",
+            )
+    except urllib_error.HTTPError as exc:
+        return Response(
+            content=exc.read(),
+            status_code=exc.code,
+            media_type=exc.headers.get("content-type") or "application/json",
+        )
+    except urllib_error.URLError as exc:
+        raise HTTPException(502, f"backend request failed: {type(exc.reason).__name__}") from exc
 
 
 @app.get("/api/catalog")
@@ -425,11 +552,19 @@ if _static_dir.exists():
 
 
 @app.get("/")
-def index() -> FileResponse:
+def index() -> HTMLResponse:
     index_path = _static_dir / "index.html"
     if not index_path.exists():
         raise HTTPException(404, "web static assets not found")
-    return FileResponse(index_path)
+    config = load_runtime_config()
+    html = index_path.read_text(encoding="utf-8")
+    replacements = {
+        'name="chatboard-default-backend-name" content="default"': f'name="chatboard-default-backend-name" content="{escape(str(config["default_backend_name"]), quote=True)}"',
+        'name="chatboard-default-backend-url" content=""': f'name="chatboard-default-backend-url" content="{escape(str(config["default_backend_url"]), quote=True)}"',
+    }
+    for old, new in replacements.items():
+        html = html.replace(old, new)
+    return HTMLResponse(html)
 
 
 @app.get("/login")

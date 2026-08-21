@@ -16,6 +16,7 @@ const PAGE_SIZE = 24;
 const COLUMN_WIDTH_STORAGE_KEY = 'chatboard.columnWidths.v1';
 const BACKEND_STORAGE_KEY = 'chatboard.backends.v1';
 const ACTIVE_BACKEND_SESSION_KEY = 'chatboard.activeBackend.v1';
+const DEFAULT_BACKEND_ID = 'default';
 const COLUMN_MIN_WEIGHT = 0.45;
 const BOARD_MOBILE_MEDIA = '(max-width: 980px)';
 const state = {
@@ -159,56 +160,48 @@ function bindColumnResizeHandles(columns) {
   });
 }
 
-function currentSiteBackend() {
+function configuredDefaultBackendName() {
+  return document.querySelector('meta[name="chatboard-default-backend-name"]')?.content?.trim() || 'default';
+}
+
+function configuredDefaultBackendUrl() {
+  const configured = document.querySelector('meta[name="chatboard-default-backend-url"]')?.content?.trim();
   const origin = window.location.origin && window.location.origin !== 'null' ? window.location.origin : window.location.href;
-  return { id: 'current', name: 'This site', url: origin, token: '', builtin: true };
+  return configured || origin;
+}
+
+function defaultBackend() {
+  return { id: DEFAULT_BACKEND_ID, name: configuredDefaultBackendName(), url: configuredDefaultBackendUrl(), has_token: false, enabled: true, is_default: true, builtin: true };
 }
 
 function normalizeBackendUrl(value) {
-  const raw = String(value || window.location.origin).trim() || window.location.origin;
-  const url = new URL(raw, window.location.origin);
+  let raw = String(value || configuredDefaultBackendUrl()).trim() || configuredDefaultBackendUrl();
+  if (raw.startsWith('//')) raw = `${window.location.protocol}${raw}`;
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(raw) && /^[^/\s]+:\d+(?:\/.*)?$/i.test(raw)) raw = `http://${raw}`;
+  const url = new URL(raw, configuredDefaultBackendUrl());
   url.hash = '';
   url.search = '';
   return url.toString().replace(/\/$/, '');
 }
 
 function loadBackendState() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(BACKEND_STORAGE_KEY) || '{}') || {};
-    const backends = Array.isArray(parsed.backends) ? parsed.backends : [];
-    return {
-      backends: backends.reduce((items, backend) => {
-        try {
-          if (backend && backend.id && backend.url) items.push({ ...backend, url: normalizeBackendUrl(backend.url) });
-        } catch (err) {
-          // Ignore invalid saved URLs so Settings can always open.
-        }
-        return items;
-      }, []),
-    };
-  } catch (err) {
-    return { backends: [] };
-  }
+  return { backends: [] };
 }
 
 function persistBackendState() {
-  try {
-    localStorage.setItem(BACKEND_STORAGE_KEY, JSON.stringify({ backends: state.backends.backends || [] }));
-  } catch (err) {
-    setBackendStatus('Backend list could not be saved in this browser.', true);
-  }
+  // Backend profiles are stored server-side; localStorage is no longer used for backend secrets.
 }
 
 function loadActiveBackendId() {
   try {
-    return sessionStorage.getItem(ACTIVE_BACKEND_SESSION_KEY) || 'current';
+    return sessionStorage.getItem(ACTIVE_BACKEND_SESSION_KEY) || DEFAULT_BACKEND_ID;
   } catch (err) {
-    return 'current';
+    return DEFAULT_BACKEND_ID;
   }
 }
 
 function persistActiveBackendId(id) {
-  state.activeBackendId = id || 'current';
+  state.activeBackendId = id || DEFAULT_BACKEND_ID;
   try {
     sessionStorage.setItem(ACTIVE_BACKEND_SESSION_KEY, state.activeBackendId);
   } catch (err) {
@@ -218,39 +211,45 @@ function persistActiveBackendId(id) {
 
 function allBackends() {
   const saved = state.backends.backends || [];
-  return [currentSiteBackend(), ...saved];
+  return saved.length ? saved : [defaultBackend()];
 }
 
 function activeBackend() {
-  return allBackends().find((backend) => backend.id === state.activeBackendId) || currentSiteBackend();
+  return allBackends().find((backend) => backend.id === state.activeBackendId) || defaultBackend();
 }
 
-function backendApiUrl(path, backend = activeBackend()) {
-  const route = String(path || '').startsWith('/') ? String(path) : `/${path}`;
-  return `${normalizeBackendUrl(backend.url)}${route}`;
+function defaultBackendProfile() {
+  return allBackends().find((backend) => backend.is_default) || allBackends()[0] || defaultBackend();
 }
 
-function backendHeaders(backend, options = {}) {
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (backend.token) headers['X-ChatBoard-Token'] = backend.token;
-  return headers;
-}
-
-function backendCredentials(backend, options = {}) {
-  if (options.credentials) return options.credentials;
-  if (backend.token) return 'omit';
-  return normalizeBackendUrl(backend.url) === normalizeBackendUrl(window.location.origin) ? 'same-origin' : 'include';
+function backendHeaders(_backend, options = {}) {
+  return { 'Content-Type': 'application/json', ...(options.headers || {}) };
 }
 
 async function api(path, options = {}) {
   const backend = activeBackend();
-  const response = await fetch(backendApiUrl(path, backend), {
+  const target = shouldUseFrontendApi(path) ? path : `/api/backends/${encodeURIComponent(backend.id)}${path}`;
+  const response = await fetch(target, {
     ...options,
-    credentials: backendCredentials(backend, options),
+    credentials: options.credentials || 'same-origin',
     headers: backendHeaders(backend, options),
   });
   if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
   return response.json();
+}
+
+function shouldUseFrontendApi(path) {
+  return ['/api/auth', '/api/logout', '/api/backend-profiles'].some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+async function loadBackendProfiles() {
+  const data = await api('/api/backend-profiles');
+  state.backends.backends = data.profiles || [];
+  const hasSelected = state.backends.backends.some((backend) => backend.id === state.activeBackendId);
+  if (!hasSelected) {
+    const defaultBackendProfile = state.backends.backends.find((backend) => backend.is_default) || state.backends.backends[0];
+    persistActiveBackendId(defaultBackendProfile?.id || DEFAULT_BACKEND_ID);
+  }
 }
 
 async function initAuthControls() {
@@ -261,7 +260,7 @@ async function initAuthControls() {
     logoutBtn.hidden = !auth.enabled;
     logoutBtn.onclick = async () => {
       await api('/api/logout', { method: 'POST', body: '{}' });
-      if (activeBackend().id === 'current') window.location.assign('/login');
+      if (new URL(normalizeBackendUrl(activeBackend().url)).origin === window.location.origin) window.location.assign('/login');
       else refresh();
     };
   } catch (err) {
@@ -279,40 +278,46 @@ function setBackendStatus(message, isError = false) {
 function renderBackendSummary() {
   const backend = activeBackend();
   const summary = $('backendActiveSummary');
-  if (summary) summary.innerHTML = `<strong>${esc(backend.name)}</strong><span>${esc(normalizeBackendUrl(backend.url))}</span>`;
+  const tokenStatus = backend.has_token ? 'token configured' : 'token missing';
+  const defaultStatus = backend.is_default ? 'default backend' : 'session backend';
+  if (summary) summary.innerHTML = `<strong>${esc(backend.name)}</strong><span>${esc(normalizeBackendUrl(backend.url))}</span><small>${esc(tokenStatus)} · ${esc(defaultStatus)}</small>`;
   const link = $('openBackendLink');
   if (link) link.href = normalizeBackendUrl(backend.url);
 }
 
 function fillBackendForm(backend) {
+  const tokenInput = $('backendToken');
+  $('backendId').value = backend?.builtin ? '' : (backend?.id || '');
   $('backendName').value = backend?.builtin ? '' : (backend?.name || '');
-  $('backendUrl').value = backend?.builtin ? window.location.origin : (backend?.url || '');
-  $('backendToken').value = backend?.builtin ? '' : (backend?.token || '');
+  $('backendUrl').value = backend?.url || window.location.origin;
+  tokenInput.value = '';
+  tokenInput.dataset.hasSavedToken = backend?.has_token ? 'true' : 'false';
+  tokenInput.placeholder = backend?.has_token ? 'Token is configured; enter a new token to replace' : 'Paste backend API token';
 }
 
 function renderBackendSelect() {
   const select = $('backendSelect');
   if (!select) return;
   const backends = allBackends();
-  select.innerHTML = backends.map((backend) => `<option value="${esc(backend.id)}">${esc(backend.name)} — ${esc(normalizeBackendUrl(backend.url))}</option>`).join('');
-  const selected = backends.find((backend) => backend.id === state.activeBackendId) ? state.activeBackendId : 'current';
+  select.innerHTML = backends.map((backend) => `<option value="${esc(backend.id)}">${esc(backend.is_default ? 'default · ' : '')}${esc(backend.name)} — ${esc(normalizeBackendUrl(backend.url))}</option>`).join('');
+  const selected = backends.find((backend) => backend.id === state.activeBackendId) ? state.activeBackendId : DEFAULT_BACKEND_ID;
   select.value = selected;
   fillBackendForm(backends.find((backend) => backend.id === selected));
   renderBackendSummary();
 }
 
-function openSettings() {
+async function openSettings() {
   $('settingsModal').classList.add('open');
   $('settingsModal').setAttribute('aria-hidden', 'false');
   document.body.classList.add('modal-open');
   try {
+    await loadBackendProfiles();
     renderBackendSelect();
-    setBackendStatus('Current site is always available and is the default for new sessions. Saved tokens stay in this browser.');
+    setBackendStatus('Backend profiles are stored server-side. Tokens are never shown in this browser.');
   } catch (err) {
     state.backends.backends = [];
-    persistBackendState();
     renderBackendSelect();
-    setBackendStatus('Saved backend settings were invalid and have been reset for this browser.', true);
+    setBackendStatus(`Backend profiles could not be loaded: ${err.message || err}`, true);
   }
 }
 
@@ -323,18 +328,35 @@ function closeSettings() {
 }
 
 function selectedBackendFromForm() {
-  const id = $('backendSelect').value || 'current';
-  return allBackends().find((backend) => backend.id === id) || currentSiteBackend();
+  const id = $('backendSelect').value || DEFAULT_BACKEND_ID;
+  return allBackends().find((backend) => backend.id === id) || defaultBackend();
 }
 
 function useBackend(id) {
-  persistActiveBackendId(id || 'current');
+  persistActiveBackendId(id || DEFAULT_BACKEND_ID);
   renderBackendSelect();
   initAuthControls();
   refresh();
 }
 
-function saveBackendFromForm() {
+function registryHeaders() {
+  const token = $('registryToken')?.value.trim() || '';
+  return token ? { 'X-ChatBoard-Registry-Token': token } : {};
+}
+
+function backendIdFromForm(selected, url) {
+  const explicit = $('backendId').value.trim();
+  if (explicit) return slugifyBackendId(explicit);
+  if (selected && !selected.builtin) return selected.id;
+  const name = $('backendName').value.trim();
+  return slugifyBackendId(name || new URL(url).host);
+}
+
+function slugifyBackendId(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || `backend-${Date.now().toString(36)}`;
+}
+
+async function saveBackendFromForm() {
   let url;
   try {
     url = normalizeBackendUrl($('backendUrl').value);
@@ -343,59 +365,88 @@ function saveBackendFromForm() {
     return;
   }
   const selected = selectedBackendFromForm();
-  const id = selected.builtin ? `backend-${Date.now().toString(36)}` : selected.id;
+  const id = backendIdFromForm(selected, url);
   const name = $('backendName').value.trim() || new URL(url).host;
-  const token = $('backendToken').value.trim();
-  const next = { id, name, url, token };
-  const backends = (state.backends.backends || []).filter((backend) => backend.id !== id && normalizeBackendUrl(backend.url) !== url);
-  state.backends.backends = [...backends, next];
-  persistBackendState();
-  persistActiveBackendId(id);
-  renderBackendSelect();
-  setBackendStatus(`Saved and selected ${name} for this session.`);
-  initAuthControls();
-  refresh();
+  const enteredToken = $('backendToken').value.trim();
+  const body = { id, name, url, enabled: true };
+  if (enteredToken) body.api_key = enteredToken;
+  setBackendStatus('Saving backend profile...');
+  try {
+    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...registryHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+    await loadBackendProfiles();
+    persistActiveBackendId(id);
+    renderBackendSelect();
+    setBackendStatus(`Saved and selected ${name} for this session.`);
+    refresh();
+  } catch (err) {
+    setBackendStatus(`Backend profile could not be saved: ${err.message || err}`, true);
+  }
 }
 
-function removeSelectedBackend() {
+async function removeSelectedBackend() {
   const selected = selectedBackendFromForm();
-  if (selected.builtin) {
-    setBackendStatus('The current site backend cannot be removed.', true);
+  if (selected.is_default) {
+    setBackendStatus('Default backend cannot be removed until another backend is set as default.', true);
     return;
   }
-  state.backends.backends = (state.backends.backends || []).filter((backend) => backend.id !== selected.id);
-  persistBackendState();
-  persistActiveBackendId('current');
-  renderBackendSelect();
-  setBackendStatus(`Removed ${selected.name}; using this site for the session.`);
-  initAuthControls();
-  refresh();
+  setBackendStatus(`Removing ${selected.name}...`);
+  try {
+    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: registryHeaders(),
+    });
+    if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+    await loadBackendProfiles();
+    const next = state.backends.backends.find((backend) => backend.is_default) || state.backends.backends[0];
+    persistActiveBackendId(next?.id || DEFAULT_BACKEND_ID);
+    renderBackendSelect();
+    setBackendStatus(`Removed ${selected.name}; using default backend for the session.`);
+    refresh();
+  } catch (err) {
+    setBackendStatus(`Backend profile could not be removed: ${err.message || err}`, true);
+  }
 }
 
 async function testBackendFromForm() {
-  let candidate;
-  try {
-    candidate = {
-      ...selectedBackendFromForm(),
-      name: $('backendName').value.trim() || selectedBackendFromForm().name,
-      url: normalizeBackendUrl($('backendUrl').value || selectedBackendFromForm().url),
-      token: $('backendToken').value.trim(),
-    };
-  } catch (err) {
-    setBackendStatus('Backend URL is not valid.', true);
-    return;
-  }
+  const selected = selectedBackendFromForm();
   setBackendStatus('Checking backend health...');
   try {
-    const response = await fetch(backendApiUrl('/api/health', candidate), {
-      credentials: backendCredentials(candidate),
-      headers: backendHeaders(candidate),
+    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/health`, {
+      method: 'POST',
+      credentials: 'same-origin',
     });
     if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
-    const health = await response.json();
-    setBackendStatus(`Backend is reachable. Version: ${health.version || 'unknown'}.`);
+    const result = await response.json();
+    setBackendStatus(`Backend is reachable. ${result.body || `HTTP ${result.status_code}`}`);
   } catch (err) {
-    setBackendStatus(`Backend health check failed: ${err.message || err}. Check URL, CORS, login, or API token.`, true);
+    setBackendStatus(`Backend health check failed: ${err.message || err}. Check URL or API token.`, true);
+  }
+}
+
+async function setDefaultBackendFromForm() {
+  const selected = selectedBackendFromForm();
+  setBackendStatus(`Setting ${selected.name} as default...`);
+  try {
+    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/default`, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: registryHeaders(),
+    });
+    if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+    await loadBackendProfiles();
+    persistActiveBackendId(selected.id);
+    renderBackendSelect();
+    setBackendStatus(`${selected.name} is now the default backend.`);
+    refresh();
+  } catch (err) {
+    setBackendStatus(`Default backend could not be changed: ${err.message || err}`, true);
   }
 }
 
@@ -833,17 +884,25 @@ $('backendSelect').addEventListener('change', () => {
   setBackendStatus('Select Use for session to switch to this backend.');
 });
 $('useBackendBtn').addEventListener('click', () => useBackend($('backendSelect').value));
-$('useCurrentBackendBtn').addEventListener('click', () => {
-  useBackend('current');
-  setBackendStatus('Using this site as the backend for this session.');
+$('useDefaultBackendBtn').addEventListener('click', () => {
+  useBackend(defaultBackendProfile().id);
+  setBackendStatus('Using the default backend for this session.');
 });
 $('saveBackendBtn').addEventListener('click', saveBackendFromForm);
 $('removeBackendBtn').addEventListener('click', removeSelectedBackend);
 $('testBackendBtn').addEventListener('click', testBackendFromForm);
+$('setDefaultBackendBtn').addEventListener('click', setDefaultBackendFromForm);
 document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && $('detailModal').classList.contains('open')) closeModal();
   if (event.key === 'Escape' && $('settingsModal').classList.contains('open')) closeSettings();
 });
 window.addEventListener('resize', () => applyBoardTemplate());
-initAuthControls();
-refresh();
+(async function initPage() {
+  try {
+    await loadBackendProfiles();
+  } catch (err) {
+    state.backends.backends = [];
+  }
+  await initAuthControls();
+  refresh();
+})();

@@ -190,7 +190,8 @@ body.resizing-columns * { cursor: col-resize !important; }
 .settings-section input:focus, .settings-section select:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(35,105,91,.10); }
 .backend-active-summary { display: grid; gap: 4px; border: 1px solid rgba(35,105,91,.18); border-radius: 16px; background: rgba(217,235,230,.45); padding: 12px; }
 .backend-active-summary strong { color: var(--accent); font-size: 16px; }
-.backend-active-summary span { color: var(--muted); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.backend-active-summary span, .backend-active-summary small { color: var(--muted); font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+.backend-active-summary small { font-family: ui-sans-serif, system-ui; }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
 .settings-actions button { padding: 8px 12px; font-size: 12px; }
 .settings-link { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,250,241,.72); color: var(--accent); padding: 8px 12px; font: 800 12px/1 ui-sans-serif, system-ui; text-decoration: none; }
