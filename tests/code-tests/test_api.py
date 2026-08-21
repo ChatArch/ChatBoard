@@ -183,6 +183,7 @@ def test_backend_profiles_are_redacted_and_default_is_unique(tmp_path, monkeypat
             BackendProfile(id="other", name="Other", url="https://example.test/api", api_key="secret-b"),
         ]
     )
+    assert registry.stat().st_mode & 0o777 == 0o600
     client = TestClient(app)
 
     profiles = client.get("/api/backend-profiles")

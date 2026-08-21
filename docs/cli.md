@@ -12,6 +12,7 @@ chatbd
 ├── --version  # Show the version and exit.
 ├── --tree  # Print the registered CLI tree and exit.
 ├── --tree-brief  # Print the registered CLI tree without parameter signatures and exit.
+├── paths  # Print ChatEnv and ChatArch-owned ChatBoard runtime paths.
 ├── project  # Inspect and manage ChatArch workspace Projects.
 │   ├── archive  # Archive completed Project cards.
 │   │   └── run [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
@@ -40,6 +41,7 @@ chatbd
 | 层级 | 命令 | 主要用途 | 默认副作用 |
 | --- | --- | --- | --- |
 | Board runtime | `serve` | 启动 Web UI | 否 |
+| Runtime readback | `paths` | 只读输出 ChatEnv provider 目录和 ChatArch-owned runtime/state 路径 | 否 |
 | Read projection | `project scan`、`project catalog`、`project card show` | 读取 workspace 并输出 JSON | 否 |
 | Task management | `project task create/list/status/update/transition/delete` | 管理独立 Tasks tab 中的任务卡片 | `list/status` 否；其余是 |
 | Metadata maintenance | `project card ensure` | 为已有目录补齐 `card.md` | 是 |
@@ -442,19 +444,7 @@ chatbd serve --host 127.0.0.1 --port 8000
 chatbd serve --username admin@example.com --password '[REDACTED]'
 ```
 
-更推荐用环境变量，避免密码进入 shell history：
-
-```bash
-CHATBOARD_USERNAME=admin@example.com CHATBOARD_PASSWORD='[REDACTED]' chatbd serve
-```
-
-也可以从文件读取密码：
-
-```bash
-chatbd serve --password-file ~/.config/chatboard/password
-```
-
-ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码和自动化 API token 分开保存到 ChatEnv profile：
+更推荐用 ChatEnv profile，避免密码进入 shell history，也避免服务配置散落到非 ChatArch 目录。ChatBoard 的 canonical ChatEnv provider 是 `Chatboard`，默认文件位于 `~/.chatarch/envs/Chatboard/<profile>.env`：
 
 ```bash
 cat <<'EOF' | chatenv paste --profile ops --yes --stdin
@@ -467,6 +457,25 @@ EOF
 chatenv use ops -t Chatboard
 chatbd serve
 ```
+
+如果确实要用 `--password-file` 做本机临时入口，密码文件也应放在 ChatArch-owned runtime root，例如 `~/.chatarch/chatboard/secrets/password`；不要使用 `~/.config/chatboard-*` 或仓库/project 目录保存秘密。
+
+只读回捞当前路径和配置开关：
+
+```bash
+chatbd paths
+```
+
+默认路径：
+
+```text
+ChatEnv profile:      ~/.chatarch/envs/Chatboard/<profile>.env
+ChatBoard state root: ~/.chatarch/chatboard/
+Backend registry:     ~/.chatarch/chatboard/backends.json
+Runtime token store:  ~/.chatarch/tokens/Chatboard/<profile>.json
+```
+
+ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码、自动化 API token、backend registry 和 server-side proxy token 分开保存到 ChatEnv profile。
 
 分层语义：
 
@@ -498,6 +507,10 @@ chatenv token refresh Chatboard ops
 | `CHATBOARD_USERNAME` | 可选登录账号；设置后登录必须同时匹配账号和密码 |
 | `CHATBOARD_PASSWORD` | 启用登录并设置登录密码 |
 | `CHATBOARD_SERVICE_URL` | ChatEnv 中记录的 ChatBoard 服务基地址，供 token refresh / 外部调用使用 |
+| `CHATBOARD_HOME` | ChatBoard runtime/state root；默认 `~/.chatarch/chatboard` |
+| `CHATBOARD_BACKENDS_FILE` | server-side backend registry JSON；默认 `~/.chatarch/chatboard/backends.json` |
+| `CHATBOARD_REGISTRY_TOKEN` | 保护 backend profile 注册/写入的 server-side token |
+| `CHATBOARD_DEFAULT_BACKEND_TOKEN` | default backend API token；只由 server-side proxy 使用 |
 | `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
 | `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |

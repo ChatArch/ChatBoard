@@ -12,6 +12,7 @@ chatbd
 ├── --version  # Show the version and exit.
 ├── --tree  # Print the registered CLI tree and exit.
 ├── --tree-brief  # Print the registered CLI tree without parameter signatures and exit.
+├── paths  # Print ChatEnv and ChatArch-owned ChatBoard runtime paths.
 ├── project  # Inspect and manage ChatArch workspace Projects.
 │   ├── archive  # Archive completed Project cards.
 │   │   └── run [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
@@ -40,6 +41,7 @@ chatbd
 | Layer | Commands | Main purpose | Default side effects |
 | --- | --- | --- | --- |
 | Board runtime | `serve` | Start the Web UI | No |
+| Runtime readback | `paths` | Print ChatEnv provider and ChatArch-owned runtime/state paths without secrets | No |
 | Read projection | `project scan`, `project catalog`, `project card show` | Read workspace state and print JSON | No |
 | Task management | `project task create/list/status/update/transition/delete` | Manage task cards in the separate Tasks tab | `list/status` no; others yes |
 | Metadata maintenance | `project card ensure` | Create `card.md` for an existing directory | Yes |
@@ -134,14 +136,13 @@ Important derived fields:
 
 ## ChatEnv and Access Tokens
 
-`chatbd serve` still supports direct login flags:
+`chatbd serve` still supports direct login flags for local development:
 
 ```bash
 chatbd serve --username admin@example.com --password "[REDACTED]"
-chatbd serve --password-file ~/.config/chatboard/password
 ```
 
-For shared ChatArch environments, prefer a ChatEnv profile so service address, workspace root, browser login credentials, and automation API token stay separated:
+For shared ChatArch environments, prefer a ChatEnv profile so service address, workspace root, browser login credentials, automation API token, backend registry, and server-side proxy token stay separated. The canonical provider is `Chatboard`, and profile files live under `~/.chatarch/envs/Chatboard/<profile>.env`:
 
 ```bash
 cat <<'EOF' | chatenv paste --profile ops --yes --stdin
@@ -153,6 +154,23 @@ CHATBOARD_API_KEY='[REDACTED]'
 EOF
 chatenv use ops -t Chatboard
 chatbd serve
+```
+
+If a local temporary `--password-file` is needed, keep it under a ChatArch-owned runtime root such as `~/.chatarch/chatboard/secrets/password`; do not store ChatBoard secrets, `Chat.env`, or backend registries under `~/.config/chatboard-*`, the repository, or a workspace project directory.
+
+Read back current paths and configured booleans without printing secrets:
+
+```bash
+chatbd paths
+```
+
+Default paths:
+
+```text
+ChatEnv profile:      ~/.chatarch/envs/Chatboard/<profile>.env
+ChatBoard state root: ~/.chatarch/chatboard/
+Backend registry:     ~/.chatarch/chatboard/backends.json
+Runtime token store:  ~/.chatarch/tokens/Chatboard/<profile>.json
 ```
 
 Access-control layers:

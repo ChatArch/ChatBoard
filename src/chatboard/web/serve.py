@@ -53,6 +53,10 @@ def serve(
         env.setdefault("CHATBOARD_API_KEY", runtime_config["api_key"])
     if runtime_config["auth_secret"]:
         env.setdefault("CHATBOARD_AUTH_SECRET", runtime_config["auth_secret"])
+    if runtime_config["session_ttl_seconds"]:
+        env.setdefault("CHATBOARD_SESSION_TTL_SECONDS", runtime_config["session_ttl_seconds"])
+    if runtime_config["cookie_secure"]:
+        env.setdefault("CHATBOARD_COOKIE_SECURE", runtime_config["cookie_secure"])
     args = [
         sys.executable,
         "-m",
