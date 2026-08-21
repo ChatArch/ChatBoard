@@ -12,6 +12,7 @@
 ### Changed
 
 - Route board API calls through `/api/backends/{profile}/api/...` so backend URLs are resolved by the frontend/proxy service host.
+- Require `chatenv>=0.2.11,<0.3.0` so ChatBoard reuses ChatEnv's owner read/write profile-file mode instead of setting permissions itself.
 
 ## 0.1.9 - 2026-08-21
 

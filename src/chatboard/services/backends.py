@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hmac
 import json
-import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin, urlparse
@@ -115,10 +114,6 @@ def save_backend_profiles(profiles: list[BackendProfile]) -> None:
         ],
     }
     file_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    try:
-        os.chmod(file_path, 0o600)
-    except OSError:
-        pass
 
 
 def get_backend_profile(profile_id: str) -> BackendProfile:
