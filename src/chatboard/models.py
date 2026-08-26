@@ -45,6 +45,7 @@ class CardLinks:
     feishu: list[str] = field(default_factory=list)
     reports: list[str] = field(default_factory=list)
     repo: str | None = None
+    public_url: str | None = None
 
 
 @dataclass

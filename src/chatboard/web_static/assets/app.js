@@ -21,6 +21,9 @@ const COLUMN_MIN_WEIGHT = 0.45;
 const BOARD_MOBILE_MEDIA = '(max-width: 980px)';
 const state = {
   catalog: null,
+  executors: null,
+  runs: [],
+  executorPermissions: null,
   activePage: 'projects',
   selected: null,
   fullscreen: false,
@@ -446,12 +449,40 @@ async function setDefaultBackendFromForm() {
 function setActivePage(page) {
   state.activePage = page;
   state.selected = null;
+  updatePageTabs();
+  refresh();
+}
+
+function updatePageTabs() {
   document.querySelectorAll('[data-page-tab]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.pageTab === page);
+    button.classList.toggle('active', button.dataset.pageTab === state.activePage);
   });
   const ensure = $('ensureCards');
-  if (ensure) ensure.closest('label').style.display = page === 'projects' ? '' : 'none';
-  refresh();
+  if (ensure) ensure.closest('label').style.display = state.activePage === 'projects' ? '' : 'none';
+}
+
+function parseBoardRoute() {
+  const match = String(window.location.hash || '').match(/^#\/(tasks|cards)\/([^/?#]+)/);
+  if (!match) return null;
+  return { page: match[1] === 'tasks' ? 'tasks' : 'projects', cardId: decodeURIComponent(match[2]) };
+}
+
+function taskDetailHash(cardId) {
+  return `#/tasks/${encodeURIComponent(cardId)}`;
+}
+
+function syncDetailHash(cardId) {
+  const hash = state.activePage === 'tasks' ? taskDetailHash(cardId) : `#/cards/${encodeURIComponent(cardId)}`;
+  if (window.location.hash !== hash) {
+    window.history.replaceState(null, '', hash);
+  }
+}
+
+function clearDetailHash(cardId) {
+  const route = parseBoardRoute();
+  if (route?.cardId === cardId) {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }
 }
 
 function emptyCatalog() {
@@ -517,6 +548,23 @@ function cardHtml(card) {
 }
 
 function renderSummary() {
+  if (state.activePage === 'executors') {
+    const executors = state.executors || [];
+    const installed = executors.filter((executor) => executor.installed).length;
+    const running = state.runs.filter((run) => run.status === 'running').length;
+    const backend = activeBackend();
+    $('summary').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card"><span>Executors</span><strong>${esc(executors.length)}</strong></div>
+        <div class="stat-card"><span>Installed</span><strong>${esc(installed)}</strong></div>
+        <div class="stat-card"><span>Runs</span><strong>${esc(state.runs.length)}</strong></div>
+        <div class="stat-card"><span>Running</span><strong>${esc(running)}</strong></div>
+      </div>
+      <div class="tag-strip"><span class="tag-chip muted">${esc(state.executorPermissions?.real_execution_requires || 'Executor operations use a separate permission boundary.')}</span></div>
+      <div class="root-line"><span>Backend: ${esc(backend.name)} · ${esc(normalizeBackendUrl(backend.url))}</span></div>
+    `;
+    return;
+  }
   const columns = state.catalog?.columns || [];
   const loaded = loadedCardCount();
   const loading = columns.some((column) => column.loading);
@@ -531,6 +579,66 @@ function renderSummary() {
     <div class="tag-strip"><span class="tag-chip muted">Progressive loading: columns render first, cards arrive in pages.</span></div>
     <div class="root-line"><span>Workspace: ${esc(state.catalog?.root || 'loading...')}</span><span>Backend: ${esc(backend.name)} · ${esc(normalizeBackendUrl(backend.url))}</span></div>
   `;
+}
+
+function executorCapabilityHtml(executor) {
+  const installed = executor.installed ? 'Installed' : 'Unavailable';
+  const notes = (executor.notes || []).map((note) => `<span class="badge muted">${esc(note)}</span>`).join('');
+  return `<article class="executor-card">
+    <div class="executor-card-head">
+      <div>
+        <h3>${esc(executor.display_name || executor.id)}</h3>
+        <div class="executor-subtitle">${esc(executor.id)}${executor.version ? ` · ${esc(executor.version)}` : ''}</div>
+      </div>
+      <span class="badge ${executor.installed ? 'area' : 'stage'}">${esc(installed)}</span>
+    </div>
+    <div class="executor-grid">
+      <span>Resume</span><strong>${executor.supports_resume ? 'yes' : 'no'}</strong>
+      <span>Stop</span><strong>${executor.supports_stop ? 'yes' : 'no'}</strong>
+      <span>Session ID</span><strong>${esc(executor.resume_id_kind || '—')}</strong>
+      <span>Command</span><strong>${esc(executor.command_path || 'not on PATH')}</strong>
+    </div>
+    ${notes ? `<div class="card-meta">${notes}</div>` : ''}
+  </article>`;
+}
+
+function runStatusClass(status) {
+  if (['done', 'needs_review'].includes(status)) return 'area';
+  if (['failed', 'stopped', 'blocked'].includes(status)) return 'stage';
+  return 'date';
+}
+
+function publicLinkHref(link) {
+  return link && link.public_url ? `<a class="inline-link" href="${esc(link.public_url)}" target="_blank" rel="noopener noreferrer">${esc(link.public_url)}</a>` : '—';
+}
+
+function runRowHtml(run) {
+  return `<button class="run-row" type="button" data-run-id="${esc(run.run_id)}">
+    <span>${esc(run.run_id)}</span>
+    <span>${esc(run.executor)}</span>
+    <span class="badge ${runStatusClass(run.status)}">${esc(run.status)}</span>
+    <span>${esc(run.task_id || run.project_id || 'workspace')}</span>
+    <span>${esc(run.backend_session_id || run.process_session_id || run.os_pid || '—')}</span>
+  </button>`;
+}
+
+function renderExecutorsPage() {
+  renderSummary();
+  $('emptyColumns').innerHTML = '';
+  $('board').className = 'board executor-board';
+  const executors = state.executors || [];
+  const runs = state.runs || [];
+  $('board').innerHTML = `
+    <section class="executor-panel">
+      <div class="column-head"><span class="column-title">Executor Health</span><span class="count">${esc(executors.length)}</span></div>
+      <div class="executor-list">${executors.length ? executors.map(executorCapabilityHtml).join('') : '<div class="empty-column-note">No executor data loaded</div>'}</div>
+    </section>
+    <section class="executor-panel">
+      <div class="column-head"><span class="column-title">Recent Runs</span><span class="count">${esc(runs.length)}</span></div>
+      <div class="run-list">${runs.length ? runs.map(runRowHtml).join('') : '<div class="empty-column-note">No runs recorded</div>'}</div>
+    </section>
+  `;
+  document.querySelectorAll('.run-row').forEach((row) => row.addEventListener('click', () => loadRunDetail(row.dataset.runId)));
 }
 
 function archiveColumnCardsHtml(cards = []) {
@@ -682,6 +790,11 @@ function sectionHtml(section) {
       <div>Path</div><div>${esc(card.workspace_path || '—')}</div>
     </div>
     ${card.summary ? `<div class="overview-summary"><span>Summary</span><p>${esc(card.summary)}</p></div>` : ''}`;
+  } else if (section.kind === 'executor_runs') {
+    const runs = section.data || [];
+    body = runs.length
+      ? `<div class="run-list">${runs.map(runRowHtml).join('')}</div>`
+      : '<div class="card-summary">No executor runs recorded for this card.</div>';
   } else if (Array.isArray(section.data)) {
     body = section.data.length ? `<pre>${esc(JSON.stringify(section.data, null, 2))}</pre>` : '<div class="card-summary">Empty</div>';
   } else {
@@ -765,6 +878,7 @@ function renderDetail(detail) {
       button.classList.add('active');
     });
   });
+  document.querySelectorAll('.run-row').forEach((row) => row.addEventListener('click', () => loadRunDetail(row.dataset.runId)));
   initFilesExplorer(detail.card.id);
 }
 
@@ -778,7 +892,9 @@ function closeModal() {
   $('detailModal').classList.remove('open');
   $('detailModal').setAttribute('aria-hidden', 'true');
   document.body.classList.remove('modal-open');
+  const closedCard = state.selected;
   state.selected = null;
+  if (closedCard) clearDetailHash(closedCard);
   if (state.catalog) renderCatalog();
 }
 
@@ -788,10 +904,11 @@ function setFullscreen(on) {
   $('fullscreenBtn').textContent = on ? 'Exit Fullscreen' : 'Fullscreen';
 }
 
-async function loadDetail(cardId) {
+async function loadDetail(cardId, options = {}) {
   state.selected = cardId;
   renderCatalog();
   openModal();
+  if (!options.preserveHash) syncDetailHash(cardId);
   $('detailTitle').textContent = 'Loading...';
   $('detailPath').textContent = cardId;
   $('detailBody').innerHTML = '<div class="section"><h3>Loading</h3><div class="card-summary">Fetching card detail...</div></div>';
@@ -800,6 +917,45 @@ async function loadDetail(cardId) {
   $('detailTitle').textContent = card.title;
   $('detailPath').textContent = card.workspace_path;
   renderDetail(detail);
+}
+
+async function loadRunDetail(runId) {
+  openModal();
+  $('detailTitle').textContent = `Run ${runId}`;
+  $('detailPath').textContent = 'Loading executor run metadata...';
+  $('detailBody').innerHTML = '<div class="section"><h3>Loading</h3><div class="card-summary">Fetching run detail...</div></div>';
+  try {
+    const detail = await api(`/api/runs/${encodeURIComponent(runId)}`);
+    const log = await api(`/api/runs/${encodeURIComponent(runId)}/log`);
+    const run = detail.run || {};
+    const links = run.public_links || {};
+    $('detailPath').textContent = `${run.executor || 'executor'} · ${run.status || 'unknown'} · ${run.workdir || ''}`;
+    $('detailBody').innerHTML = `
+      <div class="tab-panels">
+        <section class="section tab-panel active">
+          <div class="kv">
+            <div>Run ID</div><div>${esc(run.run_id)}</div>
+            <div>Executor</div><div>${esc(run.executor)}</div>
+            <div>Status</div><div>${esc(run.status)}</div>
+            <div>Session</div><div>${esc(run.backend_session_id || run.process_session_id || run.os_pid || '—')}</div>
+            <div>Project</div><div>${esc(run.project_id || '—')}</div>
+            <div>Task</div><div>${esc(run.task_id || '—')}</div>
+            <div>Workdir</div><div>${esc(run.workdir || '—')}</div>
+            <div>Prompt</div><div>${esc(run.prompt_path || '—')}</div>
+            <div>Report</div><div>${esc(run.report_path || '—')}</div>
+            <div>Resume</div><div>${esc(run.resume_command_hint || '—')}</div>
+            <div>Run Link</div><div>${publicLinkHref(links.run)}</div>
+            <div>Log Link</div><div>${publicLinkHref(links.log)}</div>
+            <div>Report Link</div><div>${publicLinkHref(links.report)}</div>
+          </div>
+          <h3 class="log-heading">Latest Log</h3>
+          <pre>${esc(log.log || 'No log output recorded.')}</pre>
+        </section>
+      </div>
+    `;
+  } catch (err) {
+    $('detailBody').innerHTML = `<div class="section"><h3>Error</h3><div class="error">${esc(err.message || err)}</div></div>`;
+  }
 }
 
 async function loadColumn(key, offset = 0) {
@@ -850,15 +1006,36 @@ async function loadTasks() {
   renderCatalog();
 }
 
+async function loadExecutors() {
+  try {
+    const [executors, runs] = await Promise.all([api('/api/executors'), api('/api/runs')]);
+    state.executors = executors.executors || [];
+    state.executorPermissions = executors.permissions || runs.permissions || null;
+    state.runs = runs.runs || [];
+  } catch (err) {
+    state.executors = [];
+    state.runs = [];
+    state.executorPermissions = { real_execution_requires: err.message || String(err) };
+  }
+  renderExecutorsPage();
+}
+
 async function refresh() {
-  state.selected = null;
+  const route = parseBoardRoute();
+  state.selected = route?.cardId || null;
   state.catalog = emptyCatalog();
   renderCatalog();
+  if (state.activePage === 'executors') {
+    await loadExecutors();
+    return;
+  }
   if (state.activePage === 'tasks') {
     await loadTasks();
+    if (route?.page === 'tasks' && route.cardId) await loadDetail(route.cardId, { preserveHash: true });
     return;
   }
   COLUMN_DEFS.forEach((column) => loadColumn(column.key, 0));
+  if (route?.page === 'projects' && route.cardId) await loadDetail(route.cardId, { preserveHash: true });
 }
 
 $('refreshBtn').addEventListener('click', refresh);
@@ -890,6 +1067,14 @@ document.addEventListener('keydown', (event) => {
   if (event.key === 'Escape' && $('settingsModal').classList.contains('open')) closeSettings();
 });
 window.addEventListener('resize', () => applyBoardTemplate());
+window.addEventListener('hashchange', () => {
+  const route = parseBoardRoute();
+  if (route?.page && route.page !== state.activePage) {
+    state.activePage = route.page;
+    updatePageTabs();
+  }
+  refresh();
+});
 (async function initPage() {
   try {
     await loadBackendProfiles();
@@ -897,5 +1082,8 @@ window.addEventListener('resize', () => applyBoardTemplate());
     state.backends.backends = [];
   }
   await initAuthControls();
+  const route = parseBoardRoute();
+  if (route?.page) state.activePage = route.page;
+  updatePageTabs();
   refresh();
 })();

@@ -480,7 +480,8 @@ ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root�
 分层语义：
 
 - `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`：面向浏览器登录，`POST /api/login` 成功后写入 `HttpOnly` session cookie。
-- `CHATBOARD_API_KEY`：面向 CLI、runner、Webhook 等非浏览器自动化，可通过 `Authorization: Bearer ...` 或 `X-ChatBoard-Token` 调用 workspace API，不需要先拿浏览器 cookie。
+- `CHATBOARD_API_KEY`：面向 CLI、runner、Webhook 等非浏览器自动化，可通过 `Authorization: Bearer <token>` 或 `X-ChatBoard-Token` 调用 workspace API，不需要先拿浏览器 cookie。
+- `CHATBOARD_EXECUTOR_API_KEY`：面向 ChatAssign/worker controller 的执行权限 token。真实 executor run、resume、stop、collect 必须提供匹配的 `Authorization: Bearer <token>` 或 `X-ChatBoard-Executor-Token`；只读 board 访问不自动获得执行权限。
 - ChatEnv 的稳定 profile 放在 `envs/Chatboard/<profile>.env`；运行态登录 cookie/token 应通过 `chatenv token ...` 放在 `tokens/Chatboard/<profile>.json`，不要把 token 明文写入文档或 commit。
 
 示例：刷新指定 profile 的浏览器登录 cookie 到 ChatEnv runtime token store：
@@ -498,7 +499,7 @@ chatenv token refresh Chatboard ops
 - `/api/health` 和 `/api/auth` 保持公开，方便健康检查和登录页判断状态。
 - 登录会写入 `HttpOnly` session cookie。
 - `POST /api/logout` 会清除 session cookie。
-- 已配置 `CHATBOARD_API_KEY` 时，workspace API 也接受 `Authorization: Bearer ...` 或 `X-ChatBoard-Token`；`/api/auth` 只返回 `api_token_enabled`，不会回显 token。
+- 已配置 `CHATBOARD_API_KEY` 时，workspace API 也接受 `Authorization: Bearer <token>` 或 `X-ChatBoard-Token`；`/api/auth` 只返回 `api_token_enabled`，不会回显 token。
 
 可选环境变量：
 
@@ -511,11 +512,35 @@ chatenv token refresh Chatboard ops
 | `CHATBOARD_BACKENDS_FILE` | server-side backend profile store JSON；默认 `~/.chatarch/chatboard/backends.json` |
 | `CHATBOARD_DEFAULT_BACKEND_TOKEN` | default backend API token；单向用于 server-side proxy 调用该 backend |
 | `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
+| `CHATBOARD_EXECUTOR_API_KEY` | executor 操作 token；真实 run/resume/stop/collect 需要单独授权 |
 | `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |
 | `CHATBOARD_COOKIE_SECURE` | 为 `1/true/yes/on` 时设置 Secure cookie |
 
 通过 HTTPS 反向代理公开服务时，应启用 `CHATBOARD_COOKIE_SECURE`，并在反向代理层为登录接口配置请求限速。这个可选门禁用于小规模 ChatBoard 部署，不替代 SSO 或 MFA。
+
+## Executor API and Public Links
+
+ChatBoard backend exposes a workspace-scoped executor layer for Agent CLIs. It is intentionally lower-level than ChatAssign: ChatAssign decides policy/review/routing, then calls this backend API.
+
+Executor APIs:
+
+```text
+GET  /api/executors
+GET  /api/executors/{executor}
+POST /api/runs
+GET  /api/runs
+GET  /api/runs/{run_id}
+GET  /api/runs/{run_id}/log
+POST /api/runs/{run_id}/resume
+POST /api/runs/{run_id}/stop
+POST /api/runs/{run_id}/collect
+GET  /api/resolve-path?path=...&card_id=...
+```
+
+`POST /api/runs` accepts `executor`, `prompt` or `prompt_path`, optional `project_id` / `task_id` / `workdir`, and `mode: dry-run | mock | real`. `dry-run` and `mock` are safe modes for API validation. `real` requires `CHATBOARD_EXECUTOR_API_KEY`. Any `full_access` / `yolo` / `force` request must also set `explicit_full_access: true`.
+
+Local-to-public resolution uses the existing ChatBoard model: `CHATBOARD_SERVICE_URL` is the public base URL, `workspace_path` is the local workspace-relative identity, and card files are public-addressable through `/api/cards/{card_id}/files/content?path=...` with normal backend auth. `/api/resolve-path` returns `local_path`, `workspace_path`, `api_path`, `public_url`, and a `resolvable` boolean. Executor runs include the same shape under `public_links` for run, log, workdir, prompt, and report artifacts when available.
 
 开发时可加：
 

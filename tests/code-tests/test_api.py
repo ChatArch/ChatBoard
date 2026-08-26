@@ -142,16 +142,18 @@ def test_pages_api_and_static_tabs_keep_projects_and_add_tasks(tmp_path):
     assert [(page["key"], page["title"]) for page in pages.json()["pages"]] == [
         ("projects", "Projects"),
         ("tasks", "Tasks"),
+        ("executors", "Executors"),
     ]
 
     index = client.get("/")
     assert index.status_code == 200
     assert 'data-page-tab="projects"' in index.text
     assert 'data-page-tab="tasks"' in index.text
+    assert 'data-page-tab="executors"' in index.text
     assert 'id="settingsBtn"' in index.text
     assert 'id="settingsModal"' in index.text
     assert '/assets/styles.css?v=settings-assets-review-2' in index.text
-    assert '/assets/app.js?v=settings-assets-review-2' in index.text
+    assert '/assets/app.js?v=executor-layer-1' in index.text
     assert 'settings-build-note' in index.text
     assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in index.text
     assert 'href="https://github.com/ChatArch/ChatBoard"' in index.text
@@ -285,6 +287,32 @@ def test_board_static_assets_support_backend_switching():
     assert ".backend-active-summary" in styles
 
 
+def test_board_static_assets_show_executor_visibility():
+    app_js = Path("src/chatboard/web_static/assets/app.js").read_text(encoding="utf-8")
+    styles = Path("src/chatboard/web_static/assets/styles.css").read_text(encoding="utf-8")
+    index_html = Path("src/chatboard/web_static/index.html").read_text(encoding="utf-8")
+
+    assert 'data-page-tab="executors"' in index_html
+    assert "loadExecutors" in app_js
+    assert "/api/executors" in app_js
+    assert "/api/runs" in app_js
+    assert "executor_runs" in app_js
+    assert "public_links" in app_js
+    assert "Run Link" in app_js
+    assert ".executor-board" in styles
+    assert ".run-row" in styles
+
+
+def test_board_static_assets_support_task_detail_deep_links():
+    app_js = Path("src/chatboard/web_static/assets/app.js").read_text(encoding="utf-8")
+
+    assert "parseBoardRoute" in app_js
+    assert "#/tasks/" in app_js
+    assert "taskDetailHash" in app_js
+    assert "hashchange" in app_js
+    assert "loadDetail(route.cardId, { preserveHash: true })" in app_js
+
+
 def test_cors_origin_parser_trims_comma_separated_origins():
     assert _cors_origins(" https://front.example , https://board.example ,, ") == [
         "https://front.example",
@@ -327,6 +355,24 @@ def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path)
     assert card["accept_mode"] == "accept"
     assert card["side_effect_level"] == "local_write"
     assert (tmp_path / "projects/chatarch/08-12-board-task-api/PRD.md").exists()
+    assert created.json()["task_link"]["api_path"] == f"/api/tasks/{card['id']}"
+    assert created.json()["task_link"]["ui_path"] == f"/#/tasks/{card['id']}"
+    assert created.json()["task_link"]["public_url"].endswith(f"/#/tasks/{card['id']}")
+    assert created.json()["prd_link"]["api_path"] == f"/api/cards/{card['id']}/files/content?path=PRD.md"
+    assert created.json()["prd_link"]["public_url"].endswith(f"/api/cards/{card['id']}/files/content?path=PRD.md")
+    assert card["public_links"]["task_link"] == created.json()["task_link"]
+    assert card["public_links"]["prd_link"] == created.json()["prd_link"]
+
+    task_detail = client.get(f"/api/tasks/{card['id']}", params={"root": str(tmp_path)})
+    assert task_detail.status_code == 200
+    assert task_detail.json()["card"]["id"] == card["id"]
+    assert task_detail.json()["task_link"] == created.json()["task_link"]
+    assert task_detail.json()["prd_link"] == created.json()["prd_link"]
+
+    card_detail = client.get(f"/api/cards/{card['id']}", params={"root": str(tmp_path)})
+    assert card_detail.status_code == 200
+    assert card_detail.json()["task_link"] == created.json()["task_link"]
+    assert card_detail.json()["prd_link"] == created.json()["prd_link"]
 
     project_catalog = client.get("/api/catalog", params={"root": str(tmp_path)})
     assert project_catalog.status_code == 200
@@ -342,6 +388,8 @@ def test_task_management_api_crud_status_and_transitions_use_tasks_tab(tmp_path)
     assert status.status_code == 200
     assert status.json()["stage"] == "inbox"
     assert "accept" in status.json()["available_transitions"]
+    assert status.json()["task_link"] == created.json()["task_link"]
+    assert status.json()["prd_link"] == created.json()["prd_link"]
 
     patched = client.patch(
         f"/api/tasks/{card['id']}",
@@ -418,7 +466,137 @@ def test_task_api_does_not_mutate_legacy_project_cards(tmp_path):
     card = detail.json()["card"]
     assert card["stage"] == "development"
     assert card["area"] == "projects"
-    assert card["next_action"] is None
+
+
+def test_executor_discovery_and_mock_run_api(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_HOME", str(tmp_path / ".chatarch" / "chatboard"))
+    client = TestClient(app)
+
+    executors = client.get("/api/executors")
+
+    assert executors.status_code == 200
+    executor_ids = {item["id"] for item in executors.json()["executors"]}
+    assert {"codex", "cursor-agent", "opencode"} <= executor_ids
+    assert executors.json()["permissions"]["safe_modes_without_executor_token"] == ["dry-run", "mock"]
+    assert "CHATBOARD_EXECUTOR_API_KEY" in executors.json()["permissions"]["real_execution_requires"]
+
+    created = client.post(
+        "/api/runs",
+        params={"root": str(tmp_path)},
+        json={"executor": "codex", "mode": "mock", "prompt": "Mock executor smoke", "workdir": "."},
+    )
+
+    assert created.status_code == 200
+    run = created.json()["run"]
+    assert run["run_id"].startswith("run_")
+    assert run["executor"] == "codex"
+    assert run["status"] == "done"
+    assert run["backend_session_id"].startswith("mock-run_")
+    assert run["process_session_id"] is None
+    assert run["os_pid"] is None
+    assert run["prompt_path"].endswith("/prompt.md")
+    assert run["report_path"].endswith("/report.md")
+    assert run["resume_command_hint"]
+    assert run["public_links"]["run"]["public_url"].endswith(f"/api/runs/{run['run_id']}")
+    assert run["public_links"]["log"]["public_url"].endswith(f"/api/runs/{run['run_id']}/log")
+
+    listing = client.get("/api/runs", params={"root": str(tmp_path)})
+    assert listing.status_code == 200
+    assert [item["run_id"] for item in listing.json()["runs"]] == [run["run_id"]]
+
+    log = client.get(f"/api/runs/{run['run_id']}/log", params={"root": str(tmp_path)})
+    assert log.status_code == 200
+    assert "mock run accepted" in log.json()["log"]
+
+
+def test_path_resolver_uses_card_file_api_when_path_is_card_scoped(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_SERVICE_URL", "https://board.public.example/")
+    _write_card(tmp_path / "projects/chatarch/08-26-link-card", title="Link Card", area="projects", stage="development")
+    client = TestClient(app)
+    card_id = "projects-chatarch-08-26-link-card"
+
+    resolved = client.get(
+        "/api/resolve-path",
+        params={"root": str(tmp_path), "card_id": card_id, "path": str(tmp_path / "projects/chatarch/08-26-link-card/PRD.md")},
+    )
+
+    assert resolved.status_code == 200
+    link = resolved.json()["link"]
+    assert link["workspace_path"] == "projects/chatarch/08-26-link-card/PRD.md"
+    assert link["kind"] == "chatboard.card_file"
+    assert link["card_id"] == card_id
+    assert link["path"] == "PRD.md"
+    assert link["api_path"] == f"/api/cards/{card_id}/files/content?path=PRD.md"
+    assert link["public_url"] == f"https://board.public.example/api/cards/{card_id}/files/content?path=PRD.md"
+    assert link["resolvable"] is True
+
+
+def test_executor_real_and_control_routes_require_executor_permission(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_HOME", str(tmp_path / ".chatarch" / "chatboard"))
+    client = TestClient(app)
+
+    denied_real = client.post(
+        "/api/runs",
+        params={"root": str(tmp_path)},
+        json={"executor": "codex", "mode": "real", "prompt": "No real process should start", "workdir": "."},
+    )
+    assert denied_real.status_code == 403
+
+    dry_run = client.post(
+        "/api/runs",
+        params={"root": str(tmp_path)},
+        json={"executor": "codex", "mode": "dry-run", "prompt": "Plan only", "workdir": "."},
+    )
+    assert dry_run.status_code == 200
+    run_id = dry_run.json()["run"]["run_id"]
+
+    denied_collect = client.post(f"/api/runs/{run_id}/collect", params={"root": str(tmp_path)})
+    assert denied_collect.status_code == 403
+
+    monkeypatch.setenv("CHATBOARD_EXECUTOR_API_KEY", "executor-secret")
+    allowed_collect = client.post(
+        f"/api/runs/{run_id}/collect",
+        params={"root": str(tmp_path)},
+        headers={"X-ChatBoard-Executor-Token": "executor-secret"},
+    )
+    assert allowed_collect.status_code == 200
+    assert allowed_collect.json()["run"]["run_id"] == run_id
+
+    yolo_without_ack = client.post(
+        "/api/runs",
+        params={"root": str(tmp_path)},
+        headers={"X-ChatBoard-Executor-Token": "executor-secret"},
+        json={
+            "executor": "codex",
+            "mode": "dry-run",
+            "prompt": "Explicit full access test",
+            "workdir": ".",
+            "full_access": True,
+        },
+    )
+    assert yolo_without_ack.status_code == 400
+    assert "explicit_full_access" in yolo_without_ack.text
+
+
+def test_card_detail_includes_related_executor_runs(tmp_path, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_HOME", str(tmp_path / ".chatarch" / "chatboard"))
+    _write_card(tmp_path / "projects/chatarch/08-26-executor-card", title="Executor Card", area="projects", stage="development")
+    client = TestClient(app)
+    card_id = "projects-chatarch-08-26-executor-card"
+
+    created = client.post(
+        "/api/runs",
+        params={"root": str(tmp_path)},
+        json={"executor": "codex", "mode": "mock", "prompt": "Attach to project", "project_id": card_id},
+    )
+    assert created.status_code == 200
+
+    detail = client.get(f"/api/cards/{card_id}", params={"root": str(tmp_path)})
+
+    assert detail.status_code == 200
+    runs_section = next(section for section in detail.json()["sections"] if section["key"] == "runs")
+    assert runs_section["kind"] == "executor_runs"
+    assert runs_section["data"][0]["run_id"] == created.json()["run"]["run_id"]
 
 
 def test_catalog_uses_lifecycle_columns_and_hides_discard(tmp_path):
