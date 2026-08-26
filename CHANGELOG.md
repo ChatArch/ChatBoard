@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.1.12 - 2026-08-26
+
+### Fixed
+
+- Fix real executor command construction so Codex, Cursor Agent, and OpenCode receive prompt files through their supported CLI surfaces instead of the invalid `--prompt-file` option.
+
 ## 0.1.11 - 2026-08-26
 
 ### Added
