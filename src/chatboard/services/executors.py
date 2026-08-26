@@ -326,13 +326,32 @@ def _default_report_path(payload: dict[str, Any], workdir: Path, root: Path, run
     return (_artifacts_dir(root, run_id) / "report.md").resolve()
 
 
-def _build_command(executor_id: str, prompt_path: Path) -> list[str]:
+def _build_command(executor_id: str, prompt_path: Path, *, explicit_full_access: bool = False) -> list[str]:
     if executor_id == "codex":
-        return ["codex", "exec", "--prompt-file", prompt_path.as_posix()]
+        sandbox = "danger-full-access" if explicit_full_access else "workspace-write"
+        return [
+            "sh",
+            "-c",
+            "exec codex exec --skip-git-repo-check -s \"$2\" -c 'approval_policy=\"never\"' - < \"$1\"",
+            "chatboard-codex",
+            prompt_path.as_posix(),
+            sandbox,
+        ]
     if executor_id == "cursor-agent":
-        return ["cursor-agent", "--print", "--prompt-file", prompt_path.as_posix()]
+        mode = "full" if explicit_full_access else "ask"
+        return [
+            "sh",
+            "-c",
+            "if [ \"$2\" = full ]; then exec cursor-agent --print --trust --force --workspace \"$PWD\" \"$(cat \"$1\")\"; fi; exec cursor-agent --print --trust --mode ask --workspace \"$PWD\" \"$(cat \"$1\")\"",
+            "chatboard-cursor-agent",
+            prompt_path.as_posix(),
+            mode,
+        ]
     if executor_id == "opencode":
-        return ["opencode", "run", "--file", prompt_path.as_posix()]
+        command = "exec opencode run --file \"$1\" 'Follow the instructions in the attached prompt file.'"
+        if explicit_full_access:
+            command = "exec opencode run --auto --file \"$1\" 'Follow the instructions in the attached prompt file.'"
+        return ["sh", "-c", command, "chatboard-opencode", prompt_path.as_posix()]
     raise ExecutorError(f"unknown executor: {executor_id}")
 
 
@@ -359,7 +378,7 @@ def create_run(payload: dict[str, Any], root: str | Path | None = None, *, can_e
     log_path = _artifacts_dir(root_path, run_id) / "run.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     definition = EXECUTORS[executor_id]
-    command = _build_command(executor_id, prompt_path)
+    command = _build_command(executor_id, prompt_path, explicit_full_access=full_access)
     command_hint = " ".join([command[0], *command[1:]])
     run = ExecutorRun(
         run_id=run_id,

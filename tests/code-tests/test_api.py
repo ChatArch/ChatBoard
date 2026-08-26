@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 import chatboard.api as api_module
 from chatboard.api import _cors_origins, _is_public_auth_path, app
 from chatboard.services.backends import BackendProfile, backend_api_url, load_backend_profiles, save_backend_profiles
+from chatboard.services import executors as executor_service
 
 
 def _project(root: Path) -> None:
@@ -576,6 +577,36 @@ def test_executor_real_and_control_routes_require_executor_permission(tmp_path, 
     )
     assert yolo_without_ack.status_code == 400
     assert "explicit_full_access" in yolo_without_ack.text
+
+
+def test_real_executor_commands_use_supported_prompt_handoff(tmp_path):
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("Reply exactly OK.\n", encoding="utf-8")
+
+    for executor_id in ["codex", "cursor-agent", "opencode"]:
+        command = executor_service._build_command(executor_id, prompt)
+        assert command[0:2] == ["sh", "-c"]
+        assert prompt.as_posix() in command
+        assert "--prompt-file" not in command
+
+    codex = executor_service._build_command("codex", prompt)
+    assert "codex exec" in codex[2]
+    assert "< \"$1\"" in codex[2]
+    assert codex[-1] == "workspace-write"
+    assert executor_service._build_command("codex", prompt, explicit_full_access=True)[-1] == "danger-full-access"
+
+    cursor = executor_service._build_command("cursor-agent", prompt)
+    assert "cursor-agent --print" in cursor[2]
+    assert "--mode ask" in cursor[2]
+    assert "--force" in cursor[2]
+    assert cursor[-1] == "ask"
+    assert executor_service._build_command("cursor-agent", prompt, explicit_full_access=True)[-1] == "full"
+
+    opencode = executor_service._build_command("opencode", prompt)
+    assert "opencode run" in opencode[2]
+    assert "--file \"$1\"" in opencode[2]
+    assert "--auto" not in opencode[2]
+    assert "--auto" in executor_service._build_command("opencode", prompt, explicit_full_access=True)[2]
 
 
 def test_card_detail_includes_related_executor_runs(tmp_path, monkeypatch):
