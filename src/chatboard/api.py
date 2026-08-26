@@ -20,8 +20,10 @@ from chatboard.auth import (
     auth_enabled,
     auth_username,
     clear_session_cookie,
+    executor_api_token_enabled,
     request_is_authenticated,
     set_session_cookie,
+    verify_executor_api_token,
     verify_credentials,
 )
 from chatboard.config import load_runtime_config
@@ -38,6 +40,8 @@ from chatboard.services.backends import (
     upsert_backend_profile,
 )
 from chatboard.services import discussion as discussion_service
+from chatboard.services import executors as executor_service
+from chatboard.services.public_links import resolve_local_path, task_link_bundle
 from chatboard.services.cards import (
     card_detail,
     card_file_content,
@@ -101,6 +105,36 @@ async def require_login(request: Request, call_next):  # type: ignore[no-untyped
 
 def _root(root: str | None = None) -> Path:
     return resolve_workspace_root(root or os.environ.get("CHATBOARD_WORKSPACE_ROOT"))
+
+
+def _executor_token_from_request(request: Request) -> str | None:
+    token = request.headers.get("X-ChatBoard-Executor-Token")
+    authorization = request.headers.get("Authorization", "")
+    if authorization.lower().startswith("bearer "):
+        token = authorization[7:].strip()
+    return token
+
+
+def _request_can_execute(request: Request) -> bool:
+    token = _executor_token_from_request(request)
+    return verify_executor_api_token(token)
+
+
+def _executor_permission_summary() -> dict[str, Any]:
+    return {
+        "executor_token_configured": executor_api_token_enabled(),
+        "real_execution_requires": "X-ChatBoard-Executor-Token or Bearer token matching CHATBOARD_EXECUTOR_API_KEY",
+        "safe_modes_without_executor_token": ["dry-run", "mock"],
+        "full_access_policy": "full_access/yolo/force must be explicit_full_access=true and is never implied",
+    }
+
+
+def _decorate_task_links(payload: dict[str, Any], *, card_id: str) -> dict[str, Any]:
+    links = task_link_bundle(card_id)
+    card = payload.get("card")
+    if isinstance(card, dict) and card.get("type") == "task":
+        card["public_links"] = links
+    return {**payload, **links}
 
 
 @app.get("/api/health")
@@ -253,6 +287,7 @@ def pages(root: str | None = None) -> dict[str, Any]:
         "pages": [
             {"key": "projects", "title": "Projects", "endpoint": "/api/catalog"},
             {"key": "tasks", "title": "Tasks", "endpoint": "/api/tasks"},
+            {"key": "executors", "title": "Executors", "endpoint": "/api/executors"},
         ],
     }
 
@@ -260,6 +295,98 @@ def pages(root: str | None = None) -> dict[str, Any]:
 @app.get("/api/tasks")
 def tasks(root: str | None = None, ensure: bool = Query(False)) -> dict[str, Any]:
     return task_catalog(root=_root(root), ensure=ensure)
+
+
+@app.get("/api/executors")
+def executors() -> dict[str, Any]:
+    return {
+        "executors": executor_service.list_executors(),
+        "permissions": _executor_permission_summary(),
+    }
+
+
+@app.get("/api/executors/{executor_id}")
+def executor_detail(executor_id: str) -> dict[str, Any]:
+    try:
+        return {"executor": executor_service.get_executor(executor_id), "permissions": _executor_permission_summary()}
+    except KeyError as exc:
+        raise HTTPException(404, f"executor not found: {executor_id}") from exc
+
+
+@app.post("/api/runs")
+def create_run(request: Request, payload: dict[str, Any] = Body(...), root: str | None = None) -> dict[str, Any]:
+    try:
+        run = executor_service.create_run(payload, root=_root(root), can_execute=_request_can_execute(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except executor_service.ExecutorError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"run": run, "permissions": _executor_permission_summary()}
+
+
+@app.get("/api/runs")
+def runs(
+    root: str | None = None,
+    project_id: str | None = None,
+    task_id: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "runs": executor_service.list_runs(root=_root(root), project_id=project_id, task_id=task_id),
+        "permissions": _executor_permission_summary(),
+    }
+
+
+@app.get("/api/runs/{run_id}")
+def run_detail(run_id: str, root: str | None = None) -> dict[str, Any]:
+    try:
+        return {"run": executor_service.get_run(run_id, root=_root(root)), "permissions": _executor_permission_summary()}
+    except KeyError as exc:
+        raise HTTPException(404, f"run not found: {run_id}") from exc
+
+
+@app.get("/api/runs/{run_id}/log")
+def run_log(run_id: str, root: str | None = None, tail: int = Query(12000, ge=0, le=200000)) -> dict[str, Any]:
+    try:
+        return executor_service.run_log(run_id, root=_root(root), tail=tail)
+    except KeyError as exc:
+        raise HTTPException(404, f"run not found: {run_id}") from exc
+
+
+@app.get("/api/resolve-path")
+def resolve_path(path: str, root: str | None = None, card_id: str | None = None) -> dict[str, Any]:
+    return {"link": resolve_local_path(path, root=_root(root), card_id=card_id)}
+
+
+@app.post("/api/runs/{run_id}/resume")
+def resume_run(request: Request, run_id: str, payload: dict[str, Any] | None = Body(None), root: str | None = None) -> dict[str, Any]:
+    try:
+        run = executor_service.resume_run(run_id, payload or {}, root=_root(root), can_execute=_request_can_execute(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, f"run not found: {run_id}") from exc
+    return {"run": run}
+
+
+@app.post("/api/runs/{run_id}/stop")
+def stop_run(request: Request, run_id: str, root: str | None = None) -> dict[str, Any]:
+    try:
+        run = executor_service.stop_run(run_id, root=_root(root), can_execute=_request_can_execute(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, f"run not found: {run_id}") from exc
+    return {"run": run}
+
+
+@app.post("/api/runs/{run_id}/collect")
+def collect_run(request: Request, run_id: str, root: str | None = None) -> dict[str, Any]:
+    try:
+        return executor_service.collect_run(run_id, root=_root(root), can_execute=_request_can_execute(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except KeyError as exc:
+        raise HTTPException(404, f"run not found: {run_id}") from exc
 
 
 @app.post("/api/tasks")
@@ -283,7 +410,7 @@ def create_task_api(payload: dict[str, Any] = Body(...), root: str | None = None
             tags=list(payload.get("tags") or []),
             dry_run=bool(payload.get("dry_run", False)),
         )
-        return {"card": card.to_dict()}
+        return _decorate_task_links({"card": card.to_dict()}, card_id=card.id)
     except FileExistsError as exc:
         raise HTTPException(400, str(exc)) from exc
     except ValueError as exc:
@@ -298,7 +425,18 @@ def get_task_status(card_id: str, root: str | None = None) -> dict[str, Any]:
         raise HTTPException(404, f"task not found: {card_id}") from exc
     if status.get("type") != "task":
         raise HTTPException(404, f"task not found: {card_id}")
-    return status
+    return _decorate_task_links(status, card_id=card_id)
+
+
+@app.get("/api/tasks/{card_id}")
+def get_task(card_id: str, root: str | None = None) -> dict[str, Any]:
+    project_path = find_card_path(card_id, root=_root(root))
+    if project_path is None:
+        raise HTTPException(404, f"task not found: {card_id}")
+    detail = card_detail(project_path, root=_root(root))
+    if detail.get("card", {}).get("type") != "task":
+        raise HTTPException(404, f"task not found: {card_id}")
+    return _decorate_task_links(detail, card_id=card_id)
 
 
 @app.patch("/api/tasks/{card_id}")
@@ -311,7 +449,8 @@ def patch_task(card_id: str, payload: dict[str, Any] = Body(...), root: str | No
         raise HTTPException(404, f"task not found: {card_id}") from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return card.to_dict()
+    payload = card.to_dict()
+    return _decorate_task_links(payload, card_id=card_id) if card.type == "task" else payload
 
 
 @app.post("/api/tasks/{card_id}/transitions")
@@ -335,7 +474,10 @@ def transition_task(card_id: str, payload: dict[str, Any] = Body(...), root: str
         raise HTTPException(400, str(exc)) from exc
     if card.type != "task":
         raise HTTPException(404, f"task not found: {card_id}")
-    return {"card": card.to_dict(), "available_transitions": card_status(card_id, root=_root(root))["available_transitions"]}
+    return _decorate_task_links(
+        {"card": card.to_dict(), "available_transitions": card_status(card_id, root=_root(root))["available_transitions"]},
+        card_id=card_id,
+    )
 
 
 @app.delete("/api/tasks/{card_id}")
@@ -370,7 +512,10 @@ def get_card(card_id: str, root: str | None = None) -> dict[str, Any]:
     project_path = find_card_path(card_id, root=_root(root))
     if project_path is None:
         raise HTTPException(404, f"card not found: {card_id}")
-    return card_detail(project_path, root=_root(root))
+    detail = card_detail(project_path, root=_root(root))
+    if detail.get("card", {}).get("type") == "task":
+        return _decorate_task_links(detail, card_id=card_id)
+    return detail
 
 
 @app.get("/api/cards/{card_id}/files")

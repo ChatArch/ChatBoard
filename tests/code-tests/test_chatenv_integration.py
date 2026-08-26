@@ -9,7 +9,7 @@ except ModuleNotFoundError:  # Python 3.10 CI
 from chatenv import EnvStore, TokenStore
 from chatenv.token_refreshers import TokenRefreshResult
 
-from chatboard.auth import api_token_enabled, api_token_from_chatenv, verify_api_token
+from chatboard.auth import api_token_enabled, api_token_from_chatenv, verify_api_token, verify_executor_api_token
 from chatboard.config import ChatboardConfig, load_runtime_config, service_url_from_chatenv, workspace_root_from_chatenv
 from chatboard.tokens import refresh_token
 
@@ -34,6 +34,7 @@ def test_chatenv_profile_separates_service_address_login_and_api_token(tmp_path,
             "CHATBOARD_USERNAME": "operator",
             "CHATBOARD_PASSWORD": "login-password",
             "CHATBOARD_API_KEY": "api-token-value",
+            "CHATBOARD_EXECUTOR_API_KEY": "executor-token-value",
         },
     )
     monkeypatch.setenv("CHATARCH_HOME", str(home))
@@ -42,6 +43,7 @@ def test_chatenv_profile_separates_service_address_login_and_api_token(tmp_path,
     monkeypatch.delenv("CHATBOARD_USERNAME", raising=False)
     monkeypatch.delenv("CHATBOARD_PASSWORD", raising=False)
     monkeypatch.delenv("CHATBOARD_API_KEY", raising=False)
+    monkeypatch.delenv("CHATBOARD_EXECUTOR_API_KEY", raising=False)
 
     config = load_runtime_config()
 
@@ -50,12 +52,15 @@ def test_chatenv_profile_separates_service_address_login_and_api_token(tmp_path,
     assert config["username"] == "operator"
     assert config["password"] == "login-password"
     assert config["api_key"] == "api-token-value"
+    assert config["executor_api_key"] == "executor-token-value"
     assert workspace_root_from_chatenv() == workspace.resolve()
     assert service_url_from_chatenv() == "https://board.public.wzhecnu.cn/"
     assert api_token_from_chatenv() == "api-token-value"
     assert api_token_enabled() is True
     assert verify_api_token("api-token-value") is True
     assert verify_api_token("wrong") is False
+    assert verify_executor_api_token("executor-token-value") is True
+    assert verify_executor_api_token("api-token-value") is False
 
 
 def test_process_env_overrides_chatenv_profile_for_runtime_auth(tmp_path, monkeypatch):

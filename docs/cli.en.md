@@ -176,7 +176,8 @@ Runtime token store:  ~/.chatarch/tokens/Chatboard/<profile>.json
 Access-control layers:
 
 - `CHATBOARD_USERNAME` / `CHATBOARD_PASSWORD`: browser login. `POST /api/login` returns an `HttpOnly` session cookie.
-- `CHATBOARD_API_KEY`: non-browser automation for CLI runners and webhooks. Workspace APIs accept `Authorization: Bearer ...` or `X-ChatBoard-Token` without first creating a browser session.
+- `CHATBOARD_API_KEY`: non-browser automation for CLI runners and webhooks. Workspace APIs accept `Authorization: Bearer <token>` or `X-ChatBoard-Token` without first creating a browser session.
+- `CHATBOARD_EXECUTOR_API_KEY`: privileged execution token for ChatAssign/worker controllers. Real executor run/resume/stop/collect operations require matching `Authorization: Bearer <token>` or `X-ChatBoard-Executor-Token`; read-only board access does not imply execution permission.
 - Stable ChatEnv profiles live under `envs/Chatboard/<profile>.env`; runtime cookies/tokens live under `tokens/Chatboard/<profile>.json` via `chatenv token ...`. Do not commit or document raw token values.
 
 Refresh a browser-login cookie into ChatEnv's runtime token store:
@@ -186,6 +187,29 @@ chatenv token refresh Chatboard ops
 ```
 
 Long-lived API tokens can be imported through ChatEnv's explicit JSON import flow, for example `{"api_key":"[REDACTED]"}`. ChatEnv status output only shows safe metadata, not token values.
+
+## Executor API and Public Links
+
+ChatBoard backend exposes a workspace-scoped executor layer for Agent CLIs. It stays lower-level than ChatAssign: ChatAssign owns policy, review, and routing, then calls this backend API.
+
+Executor APIs:
+
+```text
+GET  /api/executors
+GET  /api/executors/{executor}
+POST /api/runs
+GET  /api/runs
+GET  /api/runs/{run_id}
+GET  /api/runs/{run_id}/log
+POST /api/runs/{run_id}/resume
+POST /api/runs/{run_id}/stop
+POST /api/runs/{run_id}/collect
+GET  /api/resolve-path?path=...&card_id=...
+```
+
+`POST /api/runs` accepts `executor`, `prompt` or `prompt_path`, optional `project_id` / `task_id` / `workdir`, and `mode: dry-run | mock | real`. `dry-run` and `mock` are safe validation modes. `real` requires `CHATBOARD_EXECUTOR_API_KEY`. Any `full_access` / `yolo` / `force` request must also set `explicit_full_access: true`.
+
+Local-to-public resolution uses the existing ChatBoard model: `CHATBOARD_SERVICE_URL` is the public base URL, `workspace_path` is the local workspace-relative identity, and card files are addressable through `/api/cards/{card_id}/files/content?path=...` with normal backend auth. `/api/resolve-path` returns `local_path`, `workspace_path`, `api_path`, `public_url`, and `resolvable`. Executor runs include the same shape under `public_links` for run, log, workdir, prompt, and report artifacts when available.
 
 ## Boundaries
 

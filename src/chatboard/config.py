@@ -91,6 +91,12 @@ class ChatboardConfig(BaseEnvConfig):
         is_sensitive=True,
     )
 
+    CHATBOARD_EXECUTOR_API_KEY = EnvField(
+        "CHATBOARD_EXECUTOR_API_KEY",
+        desc="Privileged Bearer/API-key token for executor run creation and control.",
+        is_sensitive=True,
+    )
+
     CHATBOARD_AUTH_SECRET = EnvField(
         "CHATBOARD_AUTH_SECRET",
         desc="Session cookie signing secret. Defaults to the login password.",
@@ -179,6 +185,7 @@ def load_runtime_config() -> dict[str, Any]:
         "username": _field_value(ChatboardConfig.CHATBOARD_USERNAME) or None,
         "password": _field_value(ChatboardConfig.CHATBOARD_PASSWORD) or None,
         "api_key": _field_value(ChatboardConfig.CHATBOARD_API_KEY) or None,
+        "executor_api_key": _field_value(ChatboardConfig.CHATBOARD_EXECUTOR_API_KEY) or None,
         "auth_secret": _field_value(ChatboardConfig.CHATBOARD_AUTH_SECRET) or None,
         "session_ttl_seconds": _field_value(ChatboardConfig.CHATBOARD_SESSION_TTL_SECONDS) or None,
         "cookie_secure": _field_value(ChatboardConfig.CHATBOARD_COOKIE_SECURE) or None,

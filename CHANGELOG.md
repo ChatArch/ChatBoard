@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.1.11 - 2026-08-26
+
+### Added
+
+- Add executor capability and run lifecycle APIs for Codex, Cursor Agent, and OpenCode discovery, dry-run/mock run metadata, log polling, resume/stop/collect controls, and read-only Web visibility.
+- Add `CHATBOARD_EXECUTOR_API_KEY` as a separate privileged token for real executor operations.
+- Add `/api/resolve-path` and executor `public_links` metadata so backend-local workspace paths can be mapped to shareable ChatBoard API URLs when a card-scoped route is available.
+- Add explicit ChatBoard task and PRD link contracts for assignment posts, including `task_link`, `prd_link`, `GET /api/tasks/{card_id}`, and the `/#/tasks/{card_id}` Web deep link.
+
 ## 0.1.10 - 2026-08-22
 
 ### Added

@@ -314,9 +314,17 @@ def card_detail(project_path: str | Path, root: str | Path | None = None) -> dic
         for item in sorted(reports_dir.iterdir()):
             if item.is_file():
                 reports.append({"path": item.relative_to(path).as_posix(), "size": item.stat().st_size})
+    from chatboard.services.executors import list_runs
+
+    related_runs = list_runs(root=root, project_id=card.id)
+    if card.type == "task":
+        task_runs = list_runs(root=root, task_id=card.id)
+        seen = {run["run_id"] for run in related_runs}
+        related_runs.extend(run for run in task_runs if run["run_id"] not in seen)
     sections = [
         DetailSection("overview", "Overview", "fields", card.to_dict()),
         DetailSection("files", "Files", "file_tree", card_files(path)),
+        DetailSection("runs", "Runs", "executor_runs", related_runs),
         DetailSection("prd", "PRD", "markdown", prd),
         DetailSection("progress", "Progress", "markdown", progress_tail),
         DetailSection("discussion", "Discussion", "json", card.discussion.__dict__),

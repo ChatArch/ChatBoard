@@ -38,6 +38,20 @@ def api_token_enabled() -> bool:
     return api_token_from_chatenv() is not None
 
 
+def executor_api_token_from_chatenv() -> str | None:
+    token = os.environ.get("CHATBOARD_EXECUTOR_API_KEY") or load_runtime_config().get("executor_api_key")
+    return str(token) if token else None
+
+
+def executor_api_token_enabled() -> bool:
+    return executor_api_token_from_chatenv() is not None
+
+
+def verify_executor_api_token(candidate: str | None) -> bool:
+    expected = executor_api_token_from_chatenv()
+    return expected is not None and candidate is not None and hmac.compare_digest(candidate, expected)
+
+
 def verify_api_token(candidate: str | None) -> bool:
     expected = api_token_from_chatenv()
     return expected is not None and candidate is not None and hmac.compare_digest(candidate, expected)
