@@ -1,0 +1,1502 @@
+
+<!doctype html>
+<html lang="zh" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://arch.gh.wzhecnu.cn/ChatBoard/cli/">
+      
+      
+        <link rel="prev" href="..">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+    
+    
+      
+        <title>CLI 文档 - ChatBoard 文档</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cli" class="md-skip">
+          跳转至
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="页眉">
+    <a href=".." title="ChatBoard 文档" class="md-header__button md-logo" aria-label="ChatBoard 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ChatBoard 文档
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI 文档
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="选择当前语言">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="zh" class="md-select__link">
+              中文
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../en/cli/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="搜索" placeholder="搜索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="查找">
+        
+        <button type="reset" class="md-search__icon md-icon" title="清空当前内容" aria-label="清空当前内容" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            正在初始化搜索引擎
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ChatArch/ChatBoard" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ChatArch/ChatBoard
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="导航栏" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="ChatBoard 文档" class="md-nav__button md-logo" aria-label="ChatBoard 文档" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ChatBoard 文档
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ChatArch/ChatBoard" title="前往仓库" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ChatArch/ChatBoard
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    首页
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    CLI 文档
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    CLI 文档
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      命令树
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      命令分层
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workspace 根目录
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#card" class="md-nav__link">
+    <span class="md-ellipsis">
+      Card 候选目录
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tasks tab 与任务管理
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cardmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      card.md 的角色
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ensure" class="md-nav__link">
+    <span class="md-ellipsis">
+      ensure 符号逻辑
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ensure 符号逻辑">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      ID 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#area" class="md-nav__link">
+    <span class="md-ellipsis">
+      Area 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stage 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#title" class="md-nav__link">
+    <span class="md-ellipsis">
+      Title 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Summary 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tags 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#links" class="md-nav__link">
+    <span class="md-ellipsis">
+      Links 推导
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-scan-project-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      project scan 与 project catalog
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-ensure" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card ensure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card show
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-move" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card move
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Discussion 命令
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discussion 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#project-discussion-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discussion create
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-discussion-add-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discussion add-item
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#archive-discard" class="md-nav__link">
+    <span class="md-ellipsis">
+      Archive / Discard 命令
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Archive / Discard 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#project-archive-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      project archive run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-discard" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discard
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serve 命令
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executor-api-and-public-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor API and Public Links
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      使用建议
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目录">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目录
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      命令树
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      命令分层
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workspace" class="md-nav__link">
+    <span class="md-ellipsis">
+      Workspace 根目录
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#card" class="md-nav__link">
+    <span class="md-ellipsis">
+      Card 候选目录
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tasks-tab" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tasks tab 与任务管理
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cardmd" class="md-nav__link">
+    <span class="md-ellipsis">
+      card.md 的角色
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ensure" class="md-nav__link">
+    <span class="md-ellipsis">
+      ensure 符号逻辑
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ensure 符号逻辑">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#id" class="md-nav__link">
+    <span class="md-ellipsis">
+      ID 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#area" class="md-nav__link">
+    <span class="md-ellipsis">
+      Area 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage" class="md-nav__link">
+    <span class="md-ellipsis">
+      Stage 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#title" class="md-nav__link">
+    <span class="md-ellipsis">
+      Title 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      Summary 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tags" class="md-nav__link">
+    <span class="md-ellipsis">
+      Tags 推导
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#links" class="md-nav__link">
+    <span class="md-ellipsis">
+      Links 推导
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-scan-project-catalog" class="md-nav__link">
+    <span class="md-ellipsis">
+      project scan 与 project catalog
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-ensure" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card ensure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-show" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card show
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#project-card-move" class="md-nav__link">
+    <span class="md-ellipsis">
+      project card move
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      Discussion 命令
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discussion 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#project-discussion-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discussion create
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-discussion-add-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discussion add-item
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#archive-discard" class="md-nav__link">
+    <span class="md-ellipsis">
+      Archive / Discard 命令
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Archive / Discard 命令">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#project-archive-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      project archive run
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project-discard" class="md-nav__link">
+    <span class="md-ellipsis">
+      project discard
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#serve" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serve 命令
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#executor-api-and-public-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      Executor API and Public Links
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      使用建议
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cli">CLI 文档</h1>
+<p><code>chatbd</code> CLI 是 ChatBoard 的辅助管理入口。Web UI 是主要产品形态；CLI 只保留稳定、常用且容易因路径规则出错的 Project 操作。</p>
+<h2 id="_1">命令树</h2>
+<p>运行 <code>chatbd --tree</code> 会通过 ChatStyle 从实际 Click 注册树输出带参数签名的当前命令面；<code>chatbd --tree-brief</code> 输出相同层级和用途，但省略参数签名。文档中的树应与运行态命令保持一致。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>chatbd
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── --help  # Show this message and exit.
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── --version  # Show the version and exit.
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├── --tree  # Print the registered CLI tree and exit.
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── --tree-brief  # Print the registered CLI tree without parameter signatures and exit.
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── paths  # Print ChatEnv and ChatArch-owned ChatBoard runtime paths.
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├── project  # Inspect and manage ChatArch workspace Projects.
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>│   ├── archive  # Archive completed Project cards.
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>│   │   └── run [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into the dated archive area.
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>│   ├── card  # Inspect and move Project cards.
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>│   │   ├── ensure [PROJECT-PATH] [--interactive]  # Create card.md metadata for an existing Project if missing.
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>│   │   ├── move [CARD-ID] [AREA] [--stage STAGE] [--dry-run] [--interactive]  # Move a Project card between workspace areas.
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>│   │   └── show [CARD-ID] [--interactive]  # Show the detail projection for a Project card.
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>│   ├── catalog  # Print the Project board catalog grouped by columns.
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>│   ├── discard [CARD-ID] [--reason REASON] [--dry-run] [--interactive]  # Move a Project card into the formal Discard area.
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>│   ├── discussion  # Create Discussion topics and add Project items.
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>│   │   ├── add-item [DISCUSSION-ID] [CARD-ID] [--dry-run] [--interactive]  # Move a Project card into a Discussion topic's Items directory.
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>│   │   └── create [TITLE] [--slug SLUG] [--interactive]  # Create a project-like Discussion topic.
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>│   ├── scan  # Scan the workspace and list Project cards without writing metadata.
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>│   └── task  # Manage Tasks shown on the Tasks board tab.
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>│       ├── create [TITLE] [--description DESCRIPTION] [--topic TOPIC] [--slug SLUG] [--source-platform SOURCE-PLATFORM] [--source-url SOURCE-URL] [--accept-mode ACCEPT-MODE] [--side-effect-level SIDE-EFFECT-LEVEL] [--next-action NEXT-ACTION] [--assignee ASSIGNEE] [--tag TAGS] [--dry-run] [--interactive]  # Create a Task card and task project skeleton.
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>│       ├── delete [CARD-ID] [--reason REASON] [--dry-run] [--interactive]  # Soft-delete a Task card into the formal Discard area.
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>│       ├── list  # Print the Tasks board grouped by task stages.
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>│       ├── status [CARD-ID] [--interactive]  # Show a Task card's current status and available transitions.
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>│       ├── transition [CARD-ID] [TRANSITION] [--reason REASON] [--need NEED] [--summary SUMMARY] [--stage STAGE] [--interactive]  # Move a Task card between task stages.
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>│       └── update [CARD-ID] [--title TITLE] [--description DESCRIPTION] [--summary SUMMARY] [--next-action NEXT-ACTION] [--accept-mode ACCEPT-MODE] [--side-effect-level SIDE-EFFECT-LEVEL] [--assignee ASSIGNEE] [--tag TAGS] [--interactive]  # Update Task metadata.
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>└── serve [--host HOST] [--port PORT] [--root ROOT] [--reload] [--username USERNAME] [--password PASSWORD] [--password-file PASSWORD-FILE]  # Start the ChatBoard web UI.
+</code></pre></div>
+<h2 id="_2">命令分层</h2>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>命令</th>
+<th>主要用途</th>
+<th>默认副作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Board runtime</td>
+<td><code>serve</code></td>
+<td>启动 Web UI</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Runtime readback</td>
+<td><code>paths</code></td>
+<td>只读输出 ChatEnv provider 目录和 ChatArch-owned runtime/state 路径</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Read projection</td>
+<td><code>project scan</code>、<code>project catalog</code>、<code>project card show</code></td>
+<td>读取 workspace 并输出 JSON</td>
+<td>否</td>
+</tr>
+<tr>
+<td>Task management</td>
+<td><code>project task create/list/status/update/transition/delete</code></td>
+<td>管理独立 Tasks tab 中的任务卡片</td>
+<td><code>list/status</code> 否；其余是</td>
+</tr>
+<tr>
+<td>Metadata maintenance</td>
+<td><code>project card ensure</code></td>
+<td>为已有目录补齐 <code>card.md</code></td>
+<td>是</td>
+</tr>
+<tr>
+<td>Discussion workflow</td>
+<td><code>project discussion create/add-item</code></td>
+<td>创建 Discussion 节点、迁入 review item</td>
+<td>是</td>
+</tr>
+<tr>
+<td>Lifecycle workflow</td>
+<td><code>project archive run</code>、<code>project discard</code>、<code>project card move</code></td>
+<td>移动 workspace item</td>
+<td>是</td>
+</tr>
+</tbody>
+</table>
+<p><code>--dry-run</code> 只存在于移动类命令。带 <code>--dry-run</code> 时，命令返回预计路径和 metadata，不移动目录。</p>
+<p>需要参数的命令使用 ChatStyle 统一输入解析：参数缺失且当前终端可交互时会自动补问，<code>-i</code> 强制交互，<code>-I</code> 禁止交互并快速失败。参数完整时仍按普通 CLI 方式直接执行。</p>
+<h2 id="workspace">Workspace 根目录</h2>
+<p>Project 管理命令不提供 <code>--root</code> 或 <code>--workspace</code>。ChatBoard 通过 ChatEnv 字段 <code>CHATBOARD_WORKSPACE_ROOT</code> 读取 workspace 根目录，缺省值为：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>~/Playground
+</code></pre></div>
+<p>ChatBoard 扫描以下 workspace area：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>projects/
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>discussion/
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>archive/
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>discard/
+</code></pre></div>
+<p><code>trash</code> area 的实际路径不是 <code>trash/</code>，而是：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>.trash/chatboard/
+</code></pre></div>
+<p>Trash 是底层文件安全缓冲，不提供独立 CLI；必要时显式使用 <code>chatbd project card move CARD_ID trash</code>。</p>
+<p>扫描时会跳过常见构建、依赖和缓存目录，例如 <code>.git</code>、<code>.venv</code>、<code>node_modules</code>、<code>dist</code>、<code>build</code>、<code>site</code>、<code>playground</code>、<code>.trash</code>。</p>
+<h2 id="card">Card 候选目录</h2>
+<p>ChatBoard 把满足以下谓词的目录视为 card 候选：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>is_card_dir(path) :=
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  path 是目录
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  AND path 不在忽略目录中
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  AND 存在任一文件：PRD.md OR progress.md OR card.md
+</code></pre></div>
+<p>默认扫描不会把 <code>discussion/&lt;topic&gt;/Items/&lt;item&gt;</code> 当作顶层 card 输出。它们会作为 discussion card 的 <code>nested_items</code> 展示。</p>
+<h2 id="tasks-tab">Tasks tab 与任务管理</h2>
+<p>Tasks tab 是独立任务看板，不替代原有 Projects tab：</p>
+<ul>
+<li><code>project scan</code>、<code>project catalog</code> 和 <code>/api/catalog</code> 继续只投影原有 Project card。</li>
+<li><code>type: task</code> 的卡片只出现在 Web <code>Tasks</code> tab、<code>GET /api/tasks</code> 和 <code>chatbd project task list</code>。</li>
+<li>Task card 仍写入 workspace project skeleton，便于继续使用 <code>PRD.md</code>、<code>progress.md</code>、<code>reports/</code> 和 <code>card.md</code>。</li>
+</ul>
+<p>任务创建示例：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>create<span class="w"> </span><span class="s2">"Board task CLI"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--topic<span class="w"> </span>chatarch<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--slug<span class="w"> </span><span class="m">08</span>-12-board-task-cli<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--description<span class="w"> </span><span class="s2">"Create and manage a task from CLI."</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--source-platform<span class="w"> </span>feishu<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>--source-url<span class="w"> </span>https://example.feishu.cn/thread/cli<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>--accept-mode<span class="w"> </span>accept<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span>--side-effect-level<span class="w"> </span>local_write<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span>--next-action<span class="w"> </span><span class="s2">"Accept from CLI."</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">  </span>--tag<span class="w"> </span>board<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">  </span>--tag<span class="w"> </span>cli
+</code></pre></div>
+<p>任务状态和阶段迁移：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>list
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>status<span class="w"> </span>CARD_ID
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>update<span class="w"> </span>CARD_ID<span class="w"> </span>--next-action<span class="w"> </span><span class="s2">"Worker can start."</span><span class="w"> </span>--accept-mode<span class="w"> </span>auto
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>transition<span class="w"> </span>CARD_ID<span class="w"> </span>accept<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"ready"</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>transition<span class="w"> </span>CARD_ID<span class="w"> </span>block<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"needs examples"</span><span class="w"> </span>--need<span class="w"> </span><span class="s2">"choose three cards"</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>transition<span class="w"> </span>CARD_ID<span class="w"> </span>move<span class="w"> </span>--stage<span class="w"> </span>review<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"needs human check"</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>chatbd<span class="w"> </span>project<span class="w"> </span>task<span class="w"> </span>delete<span class="w"> </span>CARD_ID<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"example cleanup"</span><span class="w"> </span>--dry-run
+</code></pre></div>
+<p>Tasks tab 的阶段列为：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>Inbox -&gt; Ready -&gt; Running -&gt; Blocked -&gt; Review -&gt; Done
+</code></pre></div>
+<p>其中 <code>Auto</code> 不是列，而是 task metadata：<code>accept_mode: accept | auto</code>。
+风险/副作用级别写入 <code>side_effect_level</code>，当前取值为：<code>read_only</code>、<code>local_write</code>、<code>external_write</code>、<code>infra</code>、<code>irreversible</code>。</p>
+<h2 id="cardmd"><code>card.md</code> 的角色</h2>
+<p><code>card.md</code> 是 ChatBoard 的 board metadata sidecar。它不是 workspace 基础协议的必需文件，但一旦存在，ChatBoard 会优先读取它。</p>
+<p><code>card.md</code> 保存有限 frontmatter：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nn">---</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="nt">schema</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chatboard.project_card.v1</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">projects-example</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Example</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="nt">area</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">project</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="nt">stage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">development</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="nt">tags</span><span class="p">:</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chatarch</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="nt">accept_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">accept</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nt">side_effect_level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local_write</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="nt">next_action</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Review task status.</span>
+<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a><span class="nt">source</span><span class="p">:</span>
+<a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="w">  </span><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">feishu</span>
+<a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a><span class="w">  </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://example.feishu.cn/thread/...</span>
+<a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a><span class="nt">assets</span><span class="p">:</span>
+<a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="w">  </span><span class="nt">prd</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">PRD.md</span>
+<a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a><span class="w">  </span><span class="nt">progress</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">progress.md</span>
+<a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a><span class="w">  </span><span class="nt">reports_dir</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">reports</span>
+<a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="nt">links</span><span class="p">:</span>
+<a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a><span class="w">  </span><span class="nt">feishu</span><span class="p">:</span>
+<a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://example.feishu.cn/docx/...</span>
+<a id="__codelineno-8-22" name="__codelineno-8-22" href="#__codelineno-8-22"></a><span class="nn">---</span>
+<a id="__codelineno-8-23" name="__codelineno-8-23" href="#__codelineno-8-23"></a>
+<a id="__codelineno-8-24" name="__codelineno-8-24" href="#__codelineno-8-24"></a><span class="c1"># Summary</span>
+<a id="__codelineno-8-25" name="__codelineno-8-25" href="#__codelineno-8-25"></a>
+<a id="__codelineno-8-26" name="__codelineno-8-26" href="#__codelineno-8-26"></a><span class="l l-Scalar l-Scalar-Plain">Short human-readable summary.</span>
+</code></pre></div>
+<p>注意：frontmatter 中 <code>area: project</code> 会被读成内部 area <code>projects</code>；保存时也会把 <code>projects</code> 写回为 <code>project</code>，让 card 内容更接近人类语义。</p>
+<h2 id="ensure"><code>ensure</code> 符号逻辑</h2>
+<p><code>ensure</code> 的语义是“确保某个 workspace item 有可持久化的 board card”。它不是强制重写。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ensure_card(path, root):
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>  if path/card.md exists:
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>    return load_card(path, root)
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>  else:
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>    card = infer_card(path, root)
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>    save path/card.md
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>    return card
+</code></pre></div>
+<p>因此：</p>
+<ul>
+<li>已存在 <code>card.md</code> 时，<code>ensure</code> 读取现有 metadata，不覆盖正文。</li>
+<li>不存在 <code>card.md</code> 时，<code>ensure</code> 从目录结构和常用文件推导 metadata，并创建 <code>card.md</code>。</li>
+<li>如果目标在 <code>discussion/</code> 下，返回值会补充 <code>nested_items</code>，也就是 <code>Items/</code> 下的 review item 摘要。</li>
+</ul>
+<h3 id="id">ID 推导</h3>
+<p>Card ID 来自 workspace 相对路径：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>relative_path = path 相对 root 的路径
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>id = slugify(relative_path)
+</code></pre></div>
+<p><code>slugify</code> 规则：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>把非 a-z / A-Z / 0-9 的字符替换为 -
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>去掉首尾 -
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>转小写
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>空结果回退为 workspace-card
+</code></pre></div>
+<p>示例：</p>
+<table>
+<thead>
+<tr>
+<th>workspace path</th>
+<th>card id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects/07-08-chatboard-cli-tree-review</code></td>
+<td><code>projects-07-08-chatboard-cli-tree-review</code></td>
+</tr>
+<tr>
+<td><code>discussion/07-08-board-next/Items/foo</code></td>
+<td><code>discussion-07-08-board-next-items-foo</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="area">Area 推导</h3>
+<p>Area 来自 workspace 相对路径的第一段：</p>
+<table>
+<thead>
+<tr>
+<th>路径前缀</th>
+<th>area</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects/</code></td>
+<td><code>projects</code></td>
+</tr>
+<tr>
+<td><code>discussion/</code></td>
+<td><code>discussion</code></td>
+</tr>
+<tr>
+<td><code>archive/</code></td>
+<td><code>archive</code></td>
+</tr>
+<tr>
+<td><code>discard/</code></td>
+<td><code>discard</code></td>
+</tr>
+<tr>
+<td><code>.trash/</code></td>
+<td><code>trash</code></td>
+</tr>
+<tr>
+<td>其他路径</td>
+<td><code>projects</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="stage">Stage 推导</h3>
+<p>当没有 <code>card.md</code> 时，stage 按以下顺序推导：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>if area == archive:    archived
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>elif area == discard:  discarded
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>elif area == discussion: review
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>elif PRD.md 不存在:    scaffold
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>elif progress.md 不存在: prd
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>else:                  development
+</code></pre></div>
+<p>当存在 <code>card.md</code> 时，stage 以 frontmatter 中的 <code>stage</code> 为准。</p>
+<h3 id="title">Title 推导</h3>
+<p>Title 优先来自 <code>PRD.md</code> 中第一个一级标题：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a># Some Title
+</code></pre></div>
+<p>如果没有一级标题，则从目录名推导：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>07-08-chatboard-cli-tree-review -&gt; Chatboard Cli Tree Review
+</code></pre></div>
+<h3 id="summary">Summary 推导</h3>
+<p>Summary 来自 <code>PRD.md</code> 中第一条非空、非标题、非列表的正文行，最多保留 240 字符。没有可用正文时为空；保存 <code>card.md</code> 时正文 fallback 为 <code>TODO</code>。</p>
+<h3 id="tags">Tags 推导</h3>
+<p>Tags 来自 workspace 相对路径中的中间目录：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>tags = relative_path.parts[:-1]
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>       去掉 projects / discussion / archive / Items
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>       最多保留 6 个
+</code></pre></div>
+<p>这使主题分组目录可以自然成为 board filter。</p>
+<h3 id="links">Links 推导</h3>
+<p><code>ensure</code> 会检查 <code>PRD.md</code> 和 <code>progress.md</code>：</p>
+<ul>
+<li>如果文件存在，写入 <code>assets.prd</code> / <code>assets.progress</code>。</li>
+<li>如果正文中出现包含 <code>feishu</code> 的 URL，写入 <code>links.feishu</code>。</li>
+<li>如果存在 <code>reports/</code>，最多收集 50 个 report 文件，并写入 <code>assets.reports_dir: reports</code>。</li>
+</ul>
+<h2 id="project-scan-project-catalog"><code>project scan</code> 与 <code>project catalog</code></h2>
+<p><code>project scan</code> 输出扁平 card 列表：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>scan
+</code></pre></div>
+<p><code>project catalog</code> 输出按 board column 聚合后的 JSON：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>catalog
+</code></pre></div>
+<p>两条命令都是只读操作。缺少 <code>card.md</code> 时会临时推导 metadata，但不会写入 sidecar；需要持久化 metadata 时应显式使用 <code>project card ensure</code>。</p>
+<p>Column 规则：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>if area == trash or stage == trashed:          trash      # 底层状态，不在默认 UI 列中
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>elif area == discard or stage == discarded:    discard    # 底层状态，不在默认 UI 列中
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>elif area == archive or stage == archived:     archive    # 已归档
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>elif area == discussion:                       thoughts   # 想法
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>elif area == projects and stage in
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>     {archive_ready, complete, postprocess}:   archiving  # 归档中
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>else:                                          project    # 进行中
+</code></pre></div>
+<p>默认 UI 列是：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>想法
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>进行中
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>归档中
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>已归档
+</code></pre></div>
+<p><code>discard</code> 和 <code>trash</code> 仍可作为底层 card area 被识别，但不在主看板列中展示。</p>
+<h2 id="project-card-ensure"><code>project card ensure</code></h2>
+<p>为已有 Project 目录创建缺失的 <code>card.md</code>：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>card<span class="w"> </span>ensure<span class="w"> </span>~/Playground/projects/example
+</code></pre></div>
+<p>已有 <code>card.md</code> 时只读取，不强制覆盖正文。</p>
+<h2 id="project-card-show"><code>project card show</code></h2>
+<p>根据 <code>CARD_ID</code> 查找目录并输出 detail projection：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>card<span class="w"> </span>show<span class="w"> </span>projects-07-08-chatboard-cli-tree-review
+</code></pre></div>
+<p>输出包含 overview、files、PRD、progress、discussion、artifacts 和 archive sections。</p>
+<h2 id="project-card-move"><code>project card move</code></h2>
+<p>通用 area 移动命令：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>card<span class="w"> </span>move<span class="w"> </span>CARD_ID<span class="w"> </span>archive<span class="w"> </span>--dry-run
+</code></pre></div>
+<p>目标 area 可为：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>projects | discussion | archive | discard | trash
+</code></pre></div>
+<p>默认目标路径规则：</p>
+<table>
+<thead>
+<tr>
+<th>area</th>
+<th>destination</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects</code></td>
+<td><code>projects/&lt;原相对路径去掉第一段&gt;</code></td>
+</tr>
+<tr>
+<td><code>discussion</code></td>
+<td><code>discussion/&lt;原相对路径去掉第一段&gt;</code></td>
+</tr>
+<tr>
+<td><code>discard</code></td>
+<td><code>discard/&lt;原相对路径去掉第一段&gt;</code></td>
+</tr>
+<tr>
+<td><code>archive</code></td>
+<td><code>archive/YYYY-MM-DD/&lt;原相对路径去掉第一段&gt;</code></td>
+</tr>
+<tr>
+<td><code>trash</code></td>
+<td><code>.trash/chatboard/&lt;UTC-like stamp&gt;/&lt;原相对路径去掉第一段&gt;</code></td>
+</tr>
+</tbody>
+</table>
+<p>默认 stage 规则：</p>
+<table>
+<thead>
+<tr>
+<th>area</th>
+<th>stage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects</code></td>
+<td><code>development</code></td>
+</tr>
+<tr>
+<td><code>discussion</code></td>
+<td><code>review</code></td>
+</tr>
+<tr>
+<td><code>archive</code></td>
+<td><code>archived</code></td>
+</tr>
+<tr>
+<td><code>discard</code></td>
+<td><code>discarded</code></td>
+</tr>
+<tr>
+<td><code>trash</code></td>
+<td><code>trashed</code></td>
+</tr>
+</tbody>
+</table>
+<p>可以用 <code>--stage</code> 覆盖默认 stage。若目标路径已存在，命令失败，不覆盖。</p>
+<h2 id="discussion">Discussion 命令</h2>
+<h3 id="project-discussion-create"><code>project discussion create</code></h3>
+<p>创建标准的 project-like Discussion topic：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>discussion<span class="w"> </span>create<span class="w"> </span><span class="s2">"Board Next"</span>
+</code></pre></div>
+<p>创建内容：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>discussion/&lt;MM-DD-name&gt;/
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>  PRD.md
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>  progress.md
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>  card.md
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>  Items/
+</code></pre></div>
+<h3 id="project-discussion-add-item"><code>project discussion add-item</code></h3>
+<p>把一个 Project 移动到 Discussion 的 <code>Items/</code>：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>discussion<span class="w"> </span>add-item<span class="w"> </span>DISCUSSION_ID<span class="w"> </span>CARD_ID<span class="w"> </span>--dry-run
+</code></pre></div>
+<p><code>DISCUSSION_ID</code> 必须指向 Discussion card，目标已存在时失败，不覆盖。</p>
+<h2 id="archive-discard">Archive / Discard 命令</h2>
+<h3 id="project-archive-run"><code>project archive run</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>archive<span class="w"> </span>run<span class="w"> </span>CARD_ID<span class="w"> </span>--dry-run
+</code></pre></div>
+<p>把 card 移入 <code>archive/YYYY-MM-DD/...</code> 并将 stage 设置为 <code>archived</code>。</p>
+<h3 id="project-discard"><code>project discard</code></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>chatbd<span class="w"> </span>project<span class="w"> </span>discard<span class="w"> </span>CARD_ID<span class="w"> </span>--reason<span class="w"> </span><span class="s2">"superseded"</span><span class="w"> </span>--dry-run
+</code></pre></div>
+<p>记录 discard reason，并把 Project 移入正式的 <code>discard/</code> area。Discard 是生命周期结果；Trash 只是底层安全缓冲，因此没有独立 <code>trash</code> 命令。</p>
+<h2 id="serve">Serve 命令</h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>chatbd<span class="w"> </span>serve<span class="w"> </span>--host<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+</code></pre></div>
+<p><code>serve --root PATH</code> 会为当前服务进程设置 <code>CHATBOARD_WORKSPACE_ROOT</code>。</p>
+<p>默认不启用登录，适合只绑定 <code>127.0.0.1</code> 的本地开发场景。</p>
+<p>需要给 Web UI 和 API 加登录门禁时，启动时提供密码：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>chatbd<span class="w"> </span>serve<span class="w"> </span>--username<span class="w"> </span>admin@example.com<span class="w"> </span>--password<span class="w"> </span><span class="s1">'[REDACTED]'</span>
+</code></pre></div>
+<p>更推荐用 ChatEnv profile，避免密码进入 shell history，也避免服务配置散落到非 ChatArch 目录。ChatBoard 的 canonical ChatEnv provider 是 <code>Chatboard</code>，默认文件位于 <code>~/.chatarch/envs/Chatboard/&lt;profile&gt;.env</code>：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>cat<span class="w"> </span><span class="s">&lt;&lt;'EOF' | chatenv paste --profile ops --yes --stdin</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="s">CHATBOARD_SERVICE_URL=https://board.public.wzhecnu.cn/</span>
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="s">CHATBOARD_WORKSPACE_ROOT=~/Playground</span>
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="s">CHATBOARD_USERNAME=admin@example.com</span>
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="s">CHATBOARD_PASSWORD='[REDACTED]'</span>
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="s">CHATBOARD_API_KEY='[REDACTED]'</span>
+<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a><span class="s">EOF</span>
+<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>chatenv<span class="w"> </span>use<span class="w"> </span>ops<span class="w"> </span>-t<span class="w"> </span>Chatboard
+<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>chatbd<span class="w"> </span>serve
+</code></pre></div>
+<p>如果确实要用 <code>--password-file</code> 做本机临时入口，密码文件也应放在 ChatArch-owned runtime root，例如 <code>~/.chatarch/chatboard/secrets/password</code>；不要使用 <code>~/.config/chatboard-*</code> 或仓库/project 目录保存秘密。</p>
+<p>只读回捞当前路径和配置开关：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>chatbd<span class="w"> </span>paths
+</code></pre></div>
+<p>默认路径：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>ChatEnv profile:      ~/.chatarch/envs/Chatboard/&lt;profile&gt;.env
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>ChatBoard state root: ~/.chatarch/chatboard/
+<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>Backend profile store: ~/.chatarch/chatboard/backends.json
+<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>Runtime token store:  ~/.chatarch/tokens/Chatboard/&lt;profile&gt;.json
+</code></pre></div>
+<p>ChatBoard 同时注册了 ChatEnv schema，可把服务地址、workspace root、登录账号、登录密码、自动化 API token、backend profile store 和单向 backend API token 分开保存到 ChatEnv profile。</p>
+<p>分层语义：</p>
+<ul>
+<li><code>CHATBOARD_USERNAME</code> / <code>CHATBOARD_PASSWORD</code>：面向浏览器登录，<code>POST /api/login</code> 成功后写入 <code>HttpOnly</code> session cookie。</li>
+<li><code>CHATBOARD_API_KEY</code>：面向 CLI、runner、Webhook 等非浏览器自动化，可通过 <code>Authorization: Bearer &lt;token&gt;</code> 或 <code>X-ChatBoard-Token</code> 调用 workspace API，不需要先拿浏览器 cookie。</li>
+<li><code>CHATBOARD_EXECUTOR_API_KEY</code>：面向 ChatAssign/worker controller 的执行权限 token。真实 executor run、resume、stop、collect 必须提供匹配的 <code>Authorization: Bearer &lt;token&gt;</code> 或 <code>X-ChatBoard-Executor-Token</code>；只读 board 访问不自动获得执行权限。</li>
+<li>ChatEnv 的稳定 profile 放在 <code>envs/Chatboard/&lt;profile&gt;.env</code>；运行态登录 cookie/token 应通过 <code>chatenv token ...</code> 放在 <code>tokens/Chatboard/&lt;profile&gt;.json</code>，不要把 token 明文写入文档或 commit。</li>
+</ul>
+<p>示例：刷新指定 profile 的浏览器登录 cookie 到 ChatEnv runtime token store：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>chatenv<span class="w"> </span>token<span class="w"> </span>refresh<span class="w"> </span>Chatboard<span class="w"> </span>ops
+</code></pre></div>
+<p>如果只需要把长期 API token 作为运行态 token 管理，可以用 ChatEnv 的显式 import 流程导入 JSON，例如 <code>{"api_key":"[REDACTED]"}</code>；命令输出只显示安全 metadata，不回显 token 值。</p>
+<p>启用后：</p>
+<ul>
+<li>未登录访问 <code>/</code> 会跳转到 <code>/login</code>。</li>
+<li>未登录访问 workspace API 会返回 <code>401</code>。</li>
+<li><code>/api/health</code> 和 <code>/api/auth</code> 保持公开，方便健康检查和登录页判断状态。</li>
+<li>登录会写入 <code>HttpOnly</code> session cookie。</li>
+<li><code>POST /api/logout</code> 会清除 session cookie。</li>
+<li>已配置 <code>CHATBOARD_API_KEY</code> 时，workspace API 也接受 <code>Authorization: Bearer &lt;token&gt;</code> 或 <code>X-ChatBoard-Token</code>；<code>/api/auth</code> 只返回 <code>api_token_enabled</code>，不会回显 token。</li>
+</ul>
+<p>可选环境变量：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CHATBOARD_USERNAME</code></td>
+<td>可选登录账号；设置后登录必须同时匹配账号和密码</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_PASSWORD</code></td>
+<td>启用登录并设置登录密码</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_SERVICE_URL</code></td>
+<td>ChatEnv 中记录的 ChatBoard 服务基地址，供 token refresh / 外部调用使用</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_HOME</code></td>
+<td>ChatBoard runtime/state root；默认 <code>~/.chatarch/chatboard</code></td>
+</tr>
+<tr>
+<td><code>CHATBOARD_BACKENDS_FILE</code></td>
+<td>server-side backend profile store JSON；默认 <code>~/.chatarch/chatboard/backends.json</code></td>
+</tr>
+<tr>
+<td><code>CHATBOARD_DEFAULT_BACKEND_TOKEN</code></td>
+<td>default backend API token；单向用于 server-side proxy 调用该 backend</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_API_KEY</code></td>
+<td>自动化 API token；支持 Bearer / <code>X-ChatBoard-Token</code> 调用 workspace API</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_EXECUTOR_API_KEY</code></td>
+<td>executor 操作 token；真实 run/resume/stop/collect 需要单独授权</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_AUTH_SECRET</code></td>
+<td>session cookie 签名密钥；默认复用登录密码</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_SESSION_TTL_SECONDS</code></td>
+<td>session 有效期，默认 12 小时，最小 60 秒</td>
+</tr>
+<tr>
+<td><code>CHATBOARD_COOKIE_SECURE</code></td>
+<td>为 <code>1/true/yes/on</code> 时设置 Secure cookie</td>
+</tr>
+</tbody>
+</table>
+<p>通过 HTTPS 反向代理公开服务时，应启用 <code>CHATBOARD_COOKIE_SECURE</code>，并在反向代理层为登录接口配置请求限速。这个可选门禁用于小规模 ChatBoard 部署，不替代 SSO 或 MFA。</p>
+<h2 id="executor-api-and-public-links">Executor API and Public Links</h2>
+<p>ChatBoard backend exposes a workspace-scoped executor layer for Agent CLIs. It is intentionally lower-level than ChatAssign: ChatAssign decides policy/review/routing, then calls this backend API.</p>
+<p>Executor APIs:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>GET  /api/executors
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>GET  /api/executors/{executor}
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>POST /api/runs
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>GET  /api/runs
+<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>GET  /api/runs/{run_id}
+<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>GET  /api/runs/{run_id}/log
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>POST /api/runs/{run_id}/resume
+<a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>POST /api/runs/{run_id}/stop
+<a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>POST /api/runs/{run_id}/collect
+<a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>GET  /api/resolve-path?path=...&amp;card_id=...
+</code></pre></div>
+<p><code>POST /api/runs</code> accepts <code>executor</code>, <code>prompt</code> or <code>prompt_path</code>, optional <code>project_id</code> / <code>task_id</code> / <code>workdir</code>, and <code>mode: dry-run | mock | real</code>. <code>dry-run</code> and <code>mock</code> are safe modes for API validation. <code>real</code> requires <code>CHATBOARD_EXECUTOR_API_KEY</code>. Any <code>full_access</code> / <code>yolo</code> / <code>force</code> request must also set <code>explicit_full_access: true</code>.</p>
+<p>Local-to-public resolution uses the existing ChatBoard model: <code>CHATBOARD_SERVICE_URL</code> is the public base URL, <code>workspace_path</code> is the local workspace-relative identity, and card files are public-addressable through <code>/api/cards/{card_id}/files/content?path=...</code> with normal backend auth. <code>/api/resolve-path</code> returns <code>local_path</code>, <code>workspace_path</code>, <code>api_path</code>, <code>public_url</code>, and a <code>resolvable</code> boolean. Executor runs include the same shape under <code>public_links</code> for run, log, workdir, prompt, and report artifacts when available.</p>
+<p>开发时可加：</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>chatbd<span class="w"> </span>serve<span class="w"> </span>--reload
+</code></pre></div>
+<h2 id="_3">使用建议</h2>
+<ul>
+<li>日常查看 workspace 状态：优先使用 Web UI 或 <code>chatbd project catalog</code>。</li>
+<li>补齐 board metadata：显式使用 <code>chatbd project card ensure PROJECT_PATH</code>。</li>
+<li>所有移动类命令先使用 <code>--dry-run</code> 检查目标路径。</li>
+<li>Discussion 决策等自由文本直接维护在 Project 文档中，不为低频 metadata 更新单独提供 CLI。</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.sections", "navigation.indexes", "content.code.copy"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "\u5df2\u590d\u5236", "clipboard.copy": "\u590d\u5236", "search.result.more.one": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.more.other": "\u5728\u8be5\u9875\u4e0a\u8fd8\u6709 # \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.none": "\u6ca1\u6709\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.one": "\u627e\u5230 1 \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.other": "# \u4e2a\u7b26\u5408\u6761\u4ef6\u7684\u7ed3\u679c", "search.result.placeholder": "\u952e\u5165\u4ee5\u5f00\u59cb\u641c\u7d22", "search.result.term.missing": "\u7f3a\u5c11", "select.version": "\u9009\u62e9\u5f53\u524d\u7248\u672c"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+    
+  </body>
+</html>
