@@ -54,7 +54,7 @@ ChatBoard 复用 ChatLogin 的 `CallbackBackend`、`SessionManager`、`SQLiteSes
 
 共享 LoginUI 负责布局、主题和登录交互。ChatBoard 只通过 Jinja 继承定制表单与资源链接；应用集成可设置 `app.state.login_ui = LoginUI(...)` 覆盖渲染配置。`/auth-assets/` 仅允许包内 `login.css` 和 `login.js`，不公开模板或任意文件。
 
-HTTPS 反向代理应启用 Secure cookie、保留并校验公共 Host，并限制登录请求速率。同源检查不信任客户端提交的 Forwarded/X-Forwarded-*；仅凭代理头不能改变允许的 origin。此门禁面向小型共享工作区，不替代 SSO/MFA。
+HTTPS 反向代理应启用 Secure cookie、校验入口 Host，并限制登录请求速率。`CHATBOARD_SERVICE_URL` 是受信任的规范服务地址，其 origin 与直接请求 origin 都可用于同源检查，因此支持 public/local 代理重写 Host。该地址只能来自服务器配置，客户端 Forwarded/X-Forwarded-* 不会增加允许的 origin。此门禁面向小型共享工作区，不替代 SSO/MFA。
 
 ## 验证
 

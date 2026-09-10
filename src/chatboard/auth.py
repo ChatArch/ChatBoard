@@ -155,27 +155,39 @@ def _cookie_secure() -> bool:
     return str(value).lower() in {"1", "true", "yes", "on"}
 
 
-def require_same_origin(request: Request, *, required: bool = False) -> None:
-    """Compare Origin with Host, never client-supplied Forwarded headers.
-
-    HTTPS termination uses the existing COOKIE_SECURE setting. The reverse proxy
-    must preserve the public Host and validate allowed hosts before forwarding.
-    """
-    origin = request.headers.get("origin")
-    if request.headers.get("sec-fetch-site") == "cross-site":
-        raise AccessDenied(403, "same-origin request required")
-    if origin is None and not required:
-        return  # Non-browser JSON clients remain supported.
-    expected = f"{'https' if _cookie_secure() else request.url.scheme}://{request.headers.get('host', '')}"
+def _origin_key(value: str, *, allow_path: bool = False) -> tuple[str, str, int] | None:
     try:
-        source, target = urlsplit(origin or ""), urlsplit(expected)
-        valid = (source.scheme in {"http", "https"} and not source.username and not source.password
-                 and not source.path and not source.query and not source.fragment
-                 and (source.scheme, source.hostname, source.port or (443 if source.scheme == "https" else 80))
-                 == (target.scheme, target.hostname, target.port or (443 if target.scheme == "https" else 80)))
+        if not isinstance(value, str) or any(ord(c) <= 32 or ord(c) == 127 for c in value):
+            return None
+        parsed = urlsplit(value)
+        if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None
+                or (not allow_path and (parsed.path or parsed.query or parsed.fragment))):
+            return None
+        port = parsed.port if parsed.port is not None else (443 if parsed.scheme == "https" else 80)
+        return parsed.scheme, parsed.hostname, port
     except ValueError:
-        valid = False
-    if not valid:
+        return None
+
+
+def require_same_origin(request: Request, *, required: bool = False) -> None:
+    """Allow the direct origin and the trusted configured public service origin.
+
+    SERVICE_URL supplies the canonical origin when a trusted proxy rewrites Host
+    between public/local entrypoints. Client Forwarded headers add no origins.
+    """
+    origins = request.headers.getlist("origin")
+    if len(origins) > 1 or request.headers.get("sec-fetch-site") == "cross-site":
+        raise AccessDenied(403, "same-origin request required")
+    origin = origins[0] if origins else None
+    if origin is None and not required:
+        return  # Non-browser initial JSON login remains supported.
+    hosts = request.headers.getlist("host")
+    direct = _origin_key(f"{'https' if _cookie_secure() else request.url.scheme}://{hosts[0]}") if len(hosts) == 1 else None
+    configured = _origin_key(load_runtime_config()["service_url"], allow_path=True)
+    source = _origin_key(origin or "")
+    allowed = {key for key in (direct, configured) if key is not None}
+    if direct is None or source is None or source not in allowed:
         raise AccessDenied(403, "same-origin request required")
 
 

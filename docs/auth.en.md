@@ -54,7 +54,7 @@ The built-in board and login UI fetch CSRF automatically. `frontendFetch` permit
 
 Shared LoginUI owns layout, theme and interaction. ChatBoard uses Jinja inheritance only for its form and resource links. Integrations may set `app.state.login_ui = LoginUI(...)` to override rendering configuration. `/auth-assets/` allows only the packaged `login.css` and `login.js`, not templates or arbitrary files.
 
-HTTPS reverse proxies should enable Secure cookies, preserve and validate the public Host, and rate-limit login attempts. The same-origin check does not trust client-supplied Forwarded/X-Forwarded-* headers; those headers alone cannot change the accepted origin. This gate serves small shared workspaces, not SSO/MFA.
+HTTPS reverse proxies should enable Secure cookies, validate entry hosts and rate-limit logins. The trusted server-side `CHATBOARD_SERVICE_URL` origin is accepted alongside the direct request origin, supporting public/local Host rewrites. Client Forwarded/X-Forwarded-* headers cannot add allowed origins. This gate is for small shared workspaces, not an SSO/MFA replacement.
 
 ## Verification
 

@@ -211,6 +211,24 @@ def test_executor_token_does_not_replace_outer_gate(client, monkeypatch):
     assert client.post("/api/runs", headers={"X-ChatBoard-Executor-Token": "fixture-executor-token"}, json={}).status_code == 401
 
 
+def test_configured_public_origin_survives_proxy_host_rewrite(client, monkeypatch):
+    public = "https://board.example.test"
+    monkeypatch.setenv("CHATBOARD_SERVICE_URL", public + "/")
+    headers = {"Host": "bridge.example.test", "Origin": public}
+    response = client.post("/api/login", headers=headers, json={"password": "fixture-password"})
+    assert response.status_code == 200
+    session = client.get("/api/session", headers=headers)
+    assert session.status_code == 200
+    assert client.post("/api/logout", headers={**headers, "X-CSRF-Token": session.json()["csrf_token"]}).status_code == 200
+
+
+def test_forwarded_headers_cannot_add_a_public_origin(client, monkeypatch):
+    monkeypatch.setenv("CHATBOARD_SERVICE_URL", "https://board.example.test/")
+    headers = {"Host": "bridge.example.test", "Origin": "https://wrong.example.test",
+               "X-Forwarded-Host": "wrong.example.test", "X-Forwarded-Proto": "https"}
+    assert client.post("/api/login", headers=headers, json={"password": "fixture-password"}).status_code == 403
+
+
 def test_frontend_has_single_csrf_fetch_boundary():
     script = Path("src/chatboard/web_static/assets/app.js").read_text()
     assert "async function frontendFetch(" in script
