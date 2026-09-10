@@ -1,0 +1,21 @@
+{% extends "chatlogin/login.html" %}
+{% block form %}
+<form class="chatlogin__form" method="post" action="{{ login_url }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  {% if username_required %}
+  <label><span>账号</span><input name="username" type="text" autocomplete="username" required maxlength="256"></label>
+  {% else %}
+  <input name="username" type="hidden" value="chatboard">
+  {% endif %}
+  <label><span>密码</span><input name="password" type="password" autocomplete="current-password" required maxlength="1024"></label>
+  <button type="submit">登录</button>
+  <p class="chatlogin__status" role="status" aria-live="polite" aria-atomic="true"></p>
+</form>
+<noscript><p>请启用 JavaScript 后登录。</p></noscript>
+{% endblock %}
+{% block guest %}
+<nav aria-label="相关资源" class="chatlogin__subtitle" style="text-align:center;margin-bottom:0">
+  <a href="https://arch.gh.wzhecnu.cn/ChatBoard/" style="color:inherit">文档</a> ·
+  <a href="https://github.com/ChatArch/ChatBoard" style="color:inherit">GitHub</a>
+</nav>
+{% endblock %}

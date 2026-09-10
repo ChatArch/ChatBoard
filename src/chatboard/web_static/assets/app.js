@@ -229,10 +229,26 @@ function backendHeaders(_backend, options = {}) {
   return { 'Content-Type': 'application/json', ...(options.headers || {}) };
 }
 
+async function frontendFetch(target, options = {}) {
+  // Validate the target before acquiring or attaching this frontend's CSRF token.
+  const url = new URL(target, window.location.origin);
+  if (url.origin !== window.location.origin) throw new Error('Frontend API must be same-origin');
+  const headers = new Headers(options.headers || {});
+  const method = (options.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const sessionResponse = await fetch('/api/session', { credentials: 'same-origin', cache: 'no-store' });
+    if (!sessionResponse.ok) throw new Error(`${sessionResponse.status} session unavailable`);
+    const session = await sessionResponse.json();
+    if (session.csrf_token) headers.set('X-CSRF-Token', session.csrf_token);
+  }
+  // CSRF belongs only to this frontend/proxy origin, never a selected remote backend.
+  return fetch(target, { ...options, credentials: 'same-origin', headers });
+}
+
 async function api(path, options = {}) {
   const backend = activeBackend();
   const target = shouldUseFrontendApi(path) ? path : `/api/backends/${encodeURIComponent(backend.id)}${path}`;
-  const response = await fetch(target, {
+  const response = await frontendFetch(target, {
     ...options,
     credentials: options.credentials || 'same-origin',
     headers: backendHeaders(backend, options),
@@ -263,8 +279,7 @@ async function initAuthControls() {
     logoutBtn.hidden = !auth.enabled;
     logoutBtn.onclick = async () => {
       await api('/api/logout', { method: 'POST', body: '{}' });
-      if (new URL(normalizeBackendUrl(activeBackend().url)).origin === window.location.origin) window.location.assign('/login');
-      else refresh();
+      window.location.assign('/login');
     };
   } catch (err) {
     logoutBtn.hidden = true;
@@ -370,7 +385,7 @@ async function saveBackendFromForm() {
   if (enteredToken) body.api_key = enteredToken;
   setBackendStatus('Saving backend profile...');
   try {
-    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(id)}`, {
+    const response = await frontendFetch(`/api/backend-profiles/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
@@ -395,7 +410,7 @@ async function removeSelectedBackend() {
   }
   setBackendStatus(`Removing ${selected.name}...`);
   try {
-    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}`, {
+    const response = await frontendFetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}`, {
       method: 'DELETE',
       credentials: 'same-origin',
     });
@@ -415,7 +430,7 @@ async function testBackendFromForm() {
   const selected = selectedBackendFromForm();
   setBackendStatus('Checking backend health...');
   try {
-    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/health`, {
+    const response = await frontendFetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/health`, {
       method: 'POST',
       credentials: 'same-origin',
     });
@@ -431,7 +446,7 @@ async function setDefaultBackendFromForm() {
   const selected = selectedBackendFromForm();
   setBackendStatus(`Setting ${selected.name} as default...`);
   try {
-    const response = await fetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/default`, {
+    const response = await frontendFetch(`/api/backend-profiles/${encodeURIComponent(selected.id)}/default`, {
       method: 'POST',
       credentials: 'same-origin',
     });

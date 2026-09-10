@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-09-11
+
+### Added
+
+- Reuse ChatLogin's credential callback, durable bounded SQLite sessions, CSRF validation and shared login UI; support configurable palette, layout and appearance.
+- Add the no-store `/api/session` endpoint and protect cookie-authenticated writes with same-origin and `X-CSRF-Token` checks, including login rotation and logout.
+- Cover authentication, executor separation, frontend fetch behavior and a bounded real loopback HTTP login/logout flow in the normal test suite and CI.
+
+### Changed
+
+- Require `ChatLogin[web]>=0.1.2,<0.2.0`. Sessions live under the ChatBoard runtime root in `sessions.sqlite3`, with a 1024-session bound and ChatLogin-owned expiry/revocation.
+- Pre-0.2.0 signed timestamp cookies require one new login. New cookies wrap random ChatLogin tokens with the existing `CHATBOARD_AUTH_SECRET` (or password fallback); rotating the effective signing key invalidates existing cookies without a separate store cleanup.
+- Logout and successful login rotation revoke the old core session. API-key authentication and the independent executor token remain separate from browser sessions and CSRF.
+
 ## 0.1.12 - 2026-08-26
 
 ### Fixed

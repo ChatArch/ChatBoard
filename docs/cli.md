@@ -498,7 +498,7 @@ chatenv token refresh Chatboard ops
 - 未登录访问 workspace API 会返回 `401`。
 - `/api/health` 和 `/api/auth` 保持公开，方便健康检查和登录页判断状态。
 - 登录会写入 `HttpOnly` session cookie。
-- `POST /api/logout` 会清除 session cookie。
+- `POST /api/logout` 撤销 ChatLogin 会话并清除 cookie；cookie 写请求需同源 `Origin` 和 `/api/session` 返回的 `X-CSRF-Token`，详见[登录与认证](auth.md)。
 - 已配置 `CHATBOARD_API_KEY` 时，workspace API 也接受 `Authorization: Bearer <token>` 或 `X-ChatBoard-Token`；`/api/auth` 只返回 `api_token_enabled`，不会回显 token。
 
 可选环境变量：
@@ -513,7 +513,7 @@ chatenv token refresh Chatboard ops
 | `CHATBOARD_DEFAULT_BACKEND_TOKEN` | default backend API token；单向用于 server-side proxy 调用该 backend |
 | `CHATBOARD_API_KEY` | 自动化 API token；支持 Bearer / `X-ChatBoard-Token` 调用 workspace API |
 | `CHATBOARD_EXECUTOR_API_KEY` | executor 操作 token；真实 run/resume/stop/collect 需要单独授权 |
-| `CHATBOARD_AUTH_SECRET` | session cookie 签名密钥；默认复用登录密码 |
+| `CHATBOARD_AUTH_SECRET` | ChatLogin cookie 外层签名密钥；默认复用登录密码，轮换有效密钥后旧 cookie 失效 |
 | `CHATBOARD_SESSION_TTL_SECONDS` | session 有效期，默认 12 小时，最小 60 秒 |
 | `CHATBOARD_COOKIE_SECURE` | 为 `1/true/yes/on` 时设置 Secure cookie |
 

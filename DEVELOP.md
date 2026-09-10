@@ -21,6 +21,10 @@
 
 ## Automation
 
+- Browser auth must delegate credentials/session state/CSRF to ChatLogin; the host only retains the legacy configuration-key cookie envelope and separate API/executor gates.
+- Run `python -m pytest -q` with Node.js 22+ on PATH (or set `NODE_BINARY`) for the frontend fetch runtime regression. CI installs Node.js and treats its absence as a failure.
+- The normal suite includes a real TCP login smoke on a random loopback port, synthetic credentials/workspace and bounded startup/shutdown; it never calls a model or launches an executor.
+
 - Keep automation small and reviewable.
 - Prefer commands that can run in CI without interactive prompts.
 - Ensure generated defaults are safe for local development.

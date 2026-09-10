@@ -46,6 +46,17 @@ python -m build
 - A separate `Tasks` tab for `type: task` cards, kept out of the legacy Projects board projection.
 - Task-management CLI: `chatbd project task create/list/status/update/transition/delete` for task creation, status, updates, stage transitions, and soft-delete.
 
+## 0.2.0 Login and Authentication
+
+ChatLogin supplies the credential adapter, session engine and shared login UI. Optional username/shared password and separate API/executor tokens remain; no multi-user business permissions are added. ChatLogin owns expiry, capacity and revocation in `sessions.sqlite3` under the ChatBoard runtime root.
+
+- Old cookies require one new login after upgrade. Signing-key precedence remains `CHATBOARD_AUTH_SECRET`, then the password; rotating the effective key immediately rejects old cookies.
+- Cookie-authenticated writes require both a same-origin `Origin` and `X-CSRF-Token`. Read `GET /api/session` with the same cookie to obtain `csrf_token`; the built-in frontend handles this automatically.
+- Bearer / `X-ChatBoard-Token` automation needs no browser CSRF; real executor operations still require their separate privileged token.
+- Customize the shared UI with `CHATBOARD_LOGIN_PALETTE`, `CHATBOARD_LOGIN_LAYOUT` and `CHATBOARD_LOGIN_APPEARANCE`.
+
+See [Login and Authentication](https://arch.gh.wzhecnu.cn/ChatBoard/en/auth/). Normal pytest/CI includes full auth regressions, a bounded loopback HTTP login/logout smoke and Node.js frontend fetch tests.
+
 ## Layout
 
 - `src/`: package source code
