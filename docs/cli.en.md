@@ -136,6 +136,8 @@ Important derived fields:
 
 ## ChatEnv and Access Tokens
 
+See [Login and Authentication](auth.md) for the 0.2.0 one-time re-login, signing-key rotation, shared login UI and cookie-write `Origin` / `X-CSRF-Token` contract. Logout revokes the ChatLogin session as well as clearing the cookie.
+
 `chatbd serve` still supports direct login flags for local development:
 
 ```bash

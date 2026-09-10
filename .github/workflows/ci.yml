@@ -22,9 +22,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Install package and test dependencies
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,docs]"
-      - name: Run tests
+      - name: Run tests including login HTTP and frontend fetch regressions
         run: python -m pytest -q
       - name: Build docs
         run: mkdocs build --strict
@@ -37,3 +40,13 @@ jobs:
         run: python -m build
       - name: Check distributions
         run: python -m twine check dist/*
+      - name: Verify installed wheel login service
+        run: |
+          python -m venv "$RUNNER_TEMP/chatboard-wheel"
+          "$RUNNER_TEMP/chatboard-wheel/bin/python" -m pip install dist/*.whl pytest httpx
+          "$RUNNER_TEMP/chatboard-wheel/bin/chatbd" --version
+          "$RUNNER_TEMP/chatboard-wheel/bin/chatbd" --tree
+          "$RUNNER_TEMP/chatboard-wheel/bin/chatbd" --tree-brief
+          "$RUNNER_TEMP/chatboard-wheel/bin/python" -c "import chatboard, chatlogin; assert 'site-packages' in chatboard.__file__; print(chatboard.__version__, chatlogin.__version__)"
+          mkdir -p "$RUNNER_TEMP/chatboard-smoke-workspace"
+          CHATARCH_TEST_INSTALLED=1 CHATARCH_HOME="$RUNNER_TEMP/chatboard-smoke-home" CHATBOARD_WORKSPACE_ROOT="$RUNNER_TEMP/chatboard-smoke-workspace" PYTHONPATH= "$RUNNER_TEMP/chatboard-wheel/bin/python" -m pytest tests -q

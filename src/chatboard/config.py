@@ -97,9 +97,19 @@ class ChatboardConfig(BaseEnvConfig):
         is_sensitive=True,
     )
 
+    CHATBOARD_LOGIN_PALETTE = EnvField(
+        "CHATBOARD_LOGIN_PALETTE", default="indigo", desc="ChatLogin palette: indigo, forest, amber.",
+    )
+    CHATBOARD_LOGIN_LAYOUT = EnvField(
+        "CHATBOARD_LOGIN_LAYOUT", default="card", desc="ChatLogin layout: card or split.",
+    )
+    CHATBOARD_LOGIN_APPEARANCE = EnvField(
+        "CHATBOARD_LOGIN_APPEARANCE", default="system", desc="ChatLogin appearance: system, light, dark.",
+    )
+
     CHATBOARD_AUTH_SECRET = EnvField(
         "CHATBOARD_AUTH_SECRET",
-        desc="Session cookie signing secret. Defaults to the login password.",
+        desc="Session cookie envelope signing secret. Defaults to the login password; rotating the effective key invalidates cookies.",
         is_sensitive=True,
     )
 
@@ -189,6 +199,9 @@ def load_runtime_config() -> dict[str, Any]:
         "auth_secret": _field_value(ChatboardConfig.CHATBOARD_AUTH_SECRET) or None,
         "session_ttl_seconds": _field_value(ChatboardConfig.CHATBOARD_SESSION_TTL_SECONDS) or None,
         "cookie_secure": _field_value(ChatboardConfig.CHATBOARD_COOKIE_SECURE) or None,
+        "login_palette": _field_value(ChatboardConfig.CHATBOARD_LOGIN_PALETTE) or "indigo",
+        "login_layout": _field_value(ChatboardConfig.CHATBOARD_LOGIN_LAYOUT) or "card",
+        "login_appearance": _field_value(ChatboardConfig.CHATBOARD_LOGIN_APPEARANCE) or "system",
     }
 
 

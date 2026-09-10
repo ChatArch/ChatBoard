@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import sys
 
 import pytest
@@ -6,7 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
-if str(SRC) not in sys.path:
+if os.environ.get("CHATARCH_TEST_INSTALLED") != "1" and str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 
@@ -34,5 +35,7 @@ def isolate_chatenv_home(monkeypatch, tmp_path):
     """Keep tests from reading the developer's real ChatEnv profiles."""
 
     monkeypatch.setenv("CHATARCH_HOME", str(tmp_path / ".chatarch"))
-    for key in CHATBOARD_ENV_KEYS:
+    for key in set(CHATBOARD_ENV_KEYS) | {key for key in os.environ if key.startswith("CHATBOARD_")}:
         monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("CHATBOARD_WORKSPACE_ROOT", str(tmp_path / "workspace"))
+    (tmp_path / "workspace").mkdir()

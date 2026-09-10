@@ -4,6 +4,11 @@ from __future__ import annotations
 
 import os
 from html import escape
+from importlib.resources import files
+
+from chatlogin import AccessDenied, StoreFull, safe_next
+from chatlogin.ui import LoginUI
+import chatboard.auth as auth_support
 from pathlib import Path
 from typing import Any
 from urllib import error as urllib_error
@@ -24,7 +29,6 @@ from chatboard.auth import (
     request_is_authenticated,
     set_session_cookie,
     verify_executor_api_token,
-    verify_credentials,
 )
 from chatboard.config import load_runtime_config
 from chatboard.models import VISIBLE_COLUMN_KEYS
@@ -83,8 +87,8 @@ def _install_cors(app: FastAPI) -> None:
 app = FastAPI(title="ChatBoard API", version=__version__)
 _install_cors(app)
 
-_PUBLIC_AUTH_PATHS = {"/api/auth", "/api/health", "/api/login", "/login"}
-_PUBLIC_AUTH_PREFIXES = ("/assets/",)
+_PUBLIC_AUTH_PATHS = {"/api/auth", "/api/session", "/api/health", "/api/login", "/login"}
+_PUBLIC_AUTH_PREFIXES = ("/assets/", "/auth-assets/")
 
 
 def _is_public_auth_path(path: str) -> bool:
@@ -95,6 +99,12 @@ def _is_public_auth_path(path: str) -> bool:
 async def require_login(request: Request, call_next):  # type: ignore[no-untyped-def]
     if request.method == "OPTIONS":
         return await call_next(request)
+    try:
+        if request.url.path == "/api/session" or (request.url.path == "/api/login" and auth_enabled()):
+            auth_support.require_same_origin(request)
+        auth_support.protect_cookie_write(request)
+    except AccessDenied as exc:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers={"Cache-Control": "no-store"})
     auth_required = auth_enabled() or (api_token_enabled() and request.url.path.startswith("/api/"))
     if not auth_required or _is_public_auth_path(request.url.path) or request_is_authenticated(request):
         return await call_next(request)
@@ -152,22 +162,40 @@ def auth_status(request: Request) -> dict[str, Any]:
     }
 
 
+@app.get("/api/session")
+def session_status(request: Request) -> JSONResponse:
+    session = auth_support.request_session(request)
+    return JSONResponse({"authenticated": request_is_authenticated(request),
+                         "csrf_token": session.csrf_token if session else None},
+                        headers={"Cache-Control": "no-store"})
+
+
 @app.post("/api/login")
-def login(payload: dict[str, Any] = Body(...)) -> JSONResponse:
+def login(request: Request, payload: dict[str, Any] = Body(...)) -> JSONResponse:
     if not auth_enabled():
         return JSONResponse({"ok": True, "auth": "disabled"})
+    if request.headers.get("content-type", "").split(";", 1)[0].strip().lower() != "application/json":
+        raise HTTPException(415, "JSON login required")
     username = str(payload.get("username") or payload.get("account") or "")
     password = str(payload.get("password") or "")
-    if not verify_credentials(username, password):
+    principal = auth_support.authenticate_credentials(username, password)
+    if principal is None:
         raise HTTPException(401, "invalid credentials")
-    response = JSONResponse({"ok": True})
-    set_session_cookie(response)
+    try:
+        previous_token = auth_support.unwrap_session_cookie(request.cookies.get(auth_support.SESSION_COOKIE))
+        issued = auth_support.session_manager().issue(principal, previous_token=previous_token)
+    except StoreFull:
+        raise HTTPException(503, "session capacity exhausted") from None
+    response = JSONResponse({"ok": True, "next": safe_next(payload.get("next"))}, headers={"Cache-Control": "no-store"})
+    set_session_cookie(response, issued.token)
     return response
 
 
 @app.post("/api/logout")
-def logout() -> JSONResponse:
-    response = JSONResponse({"ok": True})
+def logout(request: Request) -> JSONResponse:
+    if auth_enabled():
+        auth_support.session_manager().revoke(auth_support.unwrap_session_cookie(request.cookies.get(auth_support.SESSION_COOKIE)))
+    response = JSONResponse({"ok": True}, headers={"Cache-Control": "no-store"})
     clear_session_cookie(response)
     return response
 
@@ -701,11 +729,25 @@ def index() -> HTMLResponse:
     return HTMLResponse(html)
 
 
-@app.get("/login")
-def login_page() -> Any:
+@app.get("/auth-assets/{name}", include_in_schema=False)
+def login_asset(name: str) -> Response:
+    if name not in {"login.css", "login.js"}:
+        raise HTTPException(404, "asset not found")
+    asset = files("chatlogin.web").joinpath("assets", name)
+    return Response(asset.read_bytes(), media_type="text/css" if name.endswith(".css") else "application/javascript")
+
+
+@app.get("/login", include_in_schema=False)
+def login_page(request: Request) -> Any:
     if not auth_enabled():
         return RedirectResponse("/", status_code=303)
-    login_path = _static_dir / "login.html"
-    if not login_path.exists():
-        raise HTTPException(404, "login page not found")
-    return FileResponse(login_path)
+    config = load_runtime_config()
+    ui = getattr(app.state, "login_ui", None) or LoginUI(
+        title="ChatBoard", subtitle="登录后管理工作区项目、任务与执行记录。",
+        palette=config["login_palette"], layout=config["login_layout"], appearance=config["login_appearance"],
+        template_dirs=(_static_dir / "templates",), template_name="board-login.html",
+    )
+    return HTMLResponse(ui.render({"assets_path": "/auth-assets", "login_url": "/api/login",
+                                   "session_url": "/api/session", "username_required": auth_username() is not None,
+                                   "next": safe_next(request.query_params.get("next"))}),
+                        headers={"Cache-Control": "no-store"})

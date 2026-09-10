@@ -730,7 +730,8 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
 
     login_page = client.get("/login")
     assert login_page.status_code == 200
-    assert "ChatBoard Login" in login_page.text
+    assert "<h1>ChatBoard</h1>" in login_page.text
+    assert 'class="chatlogin__form"' in login_page.text
     assert 'href="https://arch.gh.wzhecnu.cn/ChatBoard/"' in login_page.text
     assert 'href="https://github.com/ChatArch/ChatBoard"' in login_page.text
     assert 'type="text"' in login_page.text
@@ -769,7 +770,8 @@ def test_auth_gate_requires_login_when_password_enabled(tmp_path, monkeypatch):
     assert catalog.status_code == 200
     assert catalog.json()["total_cards"] == 1
 
-    logout = client.post("/api/logout")
+    csrf_token = client.get("/api/session").json()["csrf_token"]
+    logout = client.post("/api/logout", headers={"Origin": "http://testserver", "X-CSRF-Token": csrf_token})
     assert logout.status_code == 200
     assert "chatboard_session" not in client.cookies
     assert client.get("/api/catalog", params={"root": str(tmp_path)}).status_code == 401

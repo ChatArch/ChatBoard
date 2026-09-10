@@ -6,3 +6,5 @@ include AGENTS.md
 recursive-include docs *.md
 recursive-include .github/workflows *.yml *.yaml
 recursive-include src/chatboard/web_static *
+recursive-include tests *.py *.cjs
+include DEVELOP.md

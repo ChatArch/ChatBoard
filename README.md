@@ -47,6 +47,17 @@ python -m build
 - 新增独立 `Tasks` tab：`type: task` 的任务卡片与原有 Projects 看板分开展示。
 - 任务管理 CLI：`chatbd project task create/list/status/update/transition/delete`，覆盖创建、查看状态、更新、阶段迁移和软删除。
 
+## 0.2.0 登录与认证
+
+登录后端与登录页复用 ChatLogin；保留可选账号、共享密码及独立 API/executor token，不引入多用户业务权限。会话持久化在 ChatBoard runtime root 的 `sessions.sqlite3`，由 ChatLogin 负责过期、容量限制与撤销。
+
+- 升级后旧 cookie 需重新登录一次。`CHATBOARD_AUTH_SECRET` 优先、否则复用密码的签名密钥语义不变；轮换有效密钥立即拒绝旧 cookie。
+- 浏览器 cookie 写请求必须同时携带同源 `Origin` 和 `X-CSRF-Token`；先用同一个 cookie 读取 `GET /api/session`，取返回的 `csrf_token`。官方前端自动处理。
+- Bearer / `X-ChatBoard-Token` 自动化无需浏览器 CSRF；真实 executor 操作仍需独立执行 token。
+- `CHATBOARD_LOGIN_PALETTE`、`CHATBOARD_LOGIN_LAYOUT`、`CHATBOARD_LOGIN_APPEARANCE` 可定制共享登录页。
+
+详见[登录与认证文档](https://arch.gh.wzhecnu.cn/ChatBoard/auth/)。CI 的常规 pytest 包含完整认证回归、有界 loopback HTTP 登录/退出和 Node.js 前端 fetch 测试。
+
 ## 目录结构
 
 - `src/`：包源码

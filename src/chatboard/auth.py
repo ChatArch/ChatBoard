@@ -1,12 +1,16 @@
-"""Optional password gate for the ChatBoard web server."""
-
+"""ChatLogin-backed optional password gate; API and executor tokens stay separate."""
 from __future__ import annotations
 
+from functools import lru_cache
+from hashlib import sha256
 import hmac
 import os
-import time
-from hashlib import sha256
+from pathlib import Path
+import re
+from urllib.parse import urlsplit
 
+from chatlogin import CallbackBackend, Principal, Session, SessionManager, SQLiteSessionStore, require_csrf
+from chatlogin import AccessDenied
 from fastapi import Request, Response
 
 from chatboard.config import load_runtime_config
@@ -16,13 +20,11 @@ DEFAULT_SESSION_TTL_SECONDS = 12 * 60 * 60
 
 
 def auth_password() -> str | None:
-    password = os.environ.get("CHATBOARD_PASSWORD") or load_runtime_config()["password"]
-    return password if password else None
+    return os.environ.get("CHATBOARD_PASSWORD") or load_runtime_config()["password"] or None
 
 
 def auth_username() -> str | None:
-    username = os.environ.get("CHATBOARD_USERNAME") or load_runtime_config()["username"]
-    return username if username else None
+    return os.environ.get("CHATBOARD_USERNAME") or load_runtime_config()["username"] or None
 
 
 def auth_enabled() -> bool:
@@ -30,8 +32,7 @@ def auth_enabled() -> bool:
 
 
 def api_token_from_chatenv() -> str | None:
-    token = os.environ.get("CHATBOARD_API_KEY") or load_runtime_config()["api_key"]
-    return token if token else None
+    return os.environ.get("CHATBOARD_API_KEY") or load_runtime_config()["api_key"] or None
 
 
 def api_token_enabled() -> bool:
@@ -47,74 +48,91 @@ def executor_api_token_enabled() -> bool:
     return executor_api_token_from_chatenv() is not None
 
 
+def _matches(candidate: str | None, expected: str | None) -> bool:
+    return expected is not None and candidate is not None and hmac.compare_digest(candidate.encode(), expected.encode())
+
+
 def verify_executor_api_token(candidate: str | None) -> bool:
-    expected = executor_api_token_from_chatenv()
-    return expected is not None and candidate is not None and hmac.compare_digest(candidate, expected)
+    return _matches(candidate, executor_api_token_from_chatenv())
 
 
 def verify_api_token(candidate: str | None) -> bool:
-    expected = api_token_from_chatenv()
-    return expected is not None and candidate is not None and hmac.compare_digest(candidate, expected)
+    return _matches(candidate, api_token_from_chatenv())
 
 
 def session_ttl_seconds() -> int:
-    raw = os.environ.get("CHATBOARD_SESSION_TTL_SECONDS")
-    if not raw:
-        return DEFAULT_SESSION_TTL_SECONDS
+    raw = os.environ.get("CHATBOARD_SESSION_TTL_SECONDS") or load_runtime_config()["session_ttl_seconds"]
     try:
         return max(60, int(raw))
-    except ValueError:
+    except (ValueError, TypeError):
         return DEFAULT_SESSION_TTL_SECONDS
 
 
-def _auth_secret() -> str:
-    return os.environ.get("CHATBOARD_AUTH_SECRET") or load_runtime_config()["auth_secret"] or auth_password() or "chatboard-local"
+def credential_backend() -> CallbackBackend:
+    """Adapt the existing ChatEnv shared password, without adding a user database."""
+    expected_username, expected_password = auth_username(), auth_password()
+
+    def authenticate(username: str, password: str) -> Principal | None:
+        if expected_username is not None and not _matches(username, expected_username):
+            return None
+        if not _matches(password, expected_password):
+            return None
+        return Principal("chatboard", expected_username or "ChatBoard")
+
+    return CallbackBackend(authenticate)
 
 
-def _sign(payload: str) -> str:
-    return hmac.new(_auth_secret().encode("utf-8"), payload.encode("utf-8"), sha256).hexdigest()
-
-
-def verify_password(candidate: str) -> bool:
-    password = auth_password()
-    return password is not None and hmac.compare_digest(candidate, password)
+def authenticate_credentials(username: str, password: str) -> Principal | None:
+    # ChatLogin expects a nonempty identifier; password-only mode has one fixed identity.
+    account = username if auth_username() is not None else "chatboard"
+    return credential_backend().authenticate(account, password)
 
 
 def verify_credentials(username: str, password: str) -> bool:
-    expected_username = auth_username()
-    if expected_username is not None and not hmac.compare_digest(username, expected_username):
-        return False
-    return verify_password(password)
+    return authenticate_credentials(username, password) is not None
 
 
-def create_session_token(now: float | None = None) -> str:
-    issued_at = str(int(now or time.time()))
-    return f"{issued_at}.{_sign(issued_at)}"
+@lru_cache(maxsize=8)
+def _session_store(database: Path) -> SQLiteSessionStore:
+    return SQLiteSessionStore(database, max_sessions=1024)
 
 
-def validate_session_token(token: str | None, now: float | None = None) -> bool:
-    if not auth_enabled():
-        return True
-    if not token or "." not in token:
-        return False
-    issued_at, signature = token.rsplit(".", 1)
-    if not issued_at.isdigit():
-        return False
-    if not hmac.compare_digest(signature, _sign(issued_at)):
-        return False
-    age = int(now or time.time()) - int(issued_at)
-    return 0 <= age <= session_ttl_seconds()
+def session_manager() -> SessionManager:
+    """Durable, bounded sessions in the host's ChatArch-owned runtime directory."""
+    database = Path(load_runtime_config()["chatboard_home"]) / "sessions.sqlite3"
+    return SessionManager(_session_store(database), instance="chatboard", ttl=session_ttl_seconds())
 
 
-def request_is_authenticated(request: Request) -> bool:
-    if _request_api_token_is_valid(request):
-        return True
-    if not auth_enabled():
-        return not api_token_enabled()
-    return validate_session_token(request.cookies.get(SESSION_COOKIE))
+def _auth_secret() -> str:
+    # Preserve the existing signing-key precedence and rotation semantics.
+    return os.environ.get("CHATBOARD_AUTH_SECRET") or load_runtime_config()["auth_secret"] or auth_password() or "chatboard-local"
 
 
-def _request_api_token_is_valid(request: Request) -> bool:
+def _sign(token: str) -> str:
+    return hmac.new(_auth_secret().encode("utf-8"), token.encode("ascii"), sha256).hexdigest()
+
+
+def unwrap_session_cookie(cookie: str | None) -> str | None:
+    """Validate only the transport envelope; ChatLogin owns all session state.
+
+    Never persist a password fingerprint in the SQLite namespace. Old timestamp
+    cookies require one new login, and raw core tokens are not browser cookies.
+    """
+    match = re.fullmatch(r"v2\.([A-Za-z0-9_-]{43})\.([0-9a-f]{64})", cookie or "")
+    if match is None:
+        return None
+    token, signature = match.groups()
+    return token if hmac.compare_digest(signature, _sign(token)) else None
+
+
+def request_session(request: Request) -> Session | None:
+    token = unwrap_session_cookie(request.cookies.get(SESSION_COOKIE))
+    if not auth_enabled() or not token:
+        return None
+    return session_manager().resolve(token)
+
+
+def request_api_token_is_valid(request: Request) -> bool:
     token = request.headers.get("X-ChatBoard-Token")
     authorization = request.headers.get("Authorization", "")
     if authorization.lower().startswith("bearer "):
@@ -122,21 +140,58 @@ def _request_api_token_is_valid(request: Request) -> bool:
     return verify_api_token(token)
 
 
+def request_is_authenticated(request: Request) -> bool:
+    if request_api_token_is_valid(request):
+        return True
+    if not auth_enabled():
+        return not api_token_enabled()
+    return request_session(request) is not None
+
+
 def _cookie_secure() -> bool:
-    return os.environ.get("CHATBOARD_COOKIE_SECURE", "").lower() in {"1", "true", "yes", "on"}
+    value = os.environ.get("CHATBOARD_COOKIE_SECURE")
+    if value is None:
+        value = load_runtime_config()["cookie_secure"] or ""
+    return str(value).lower() in {"1", "true", "yes", "on"}
 
 
-def set_session_cookie(response: Response) -> None:
-    response.set_cookie(
-        SESSION_COOKIE,
-        create_session_token(),
-        max_age=session_ttl_seconds(),
-        httponly=True,
-        secure=_cookie_secure(),
-        samesite="lax",
-        path="/",
-    )
+def require_same_origin(request: Request, *, required: bool = False) -> None:
+    """Compare Origin with Host, never client-supplied Forwarded headers.
+
+    HTTPS termination uses the existing COOKIE_SECURE setting. The reverse proxy
+    must preserve the public Host and validate allowed hosts before forwarding.
+    """
+    origin = request.headers.get("origin")
+    if request.headers.get("sec-fetch-site") == "cross-site":
+        raise AccessDenied(403, "same-origin request required")
+    if origin is None and not required:
+        return  # Non-browser JSON clients remain supported.
+    expected = f"{'https' if _cookie_secure() else request.url.scheme}://{request.headers.get('host', '')}"
+    try:
+        source, target = urlsplit(origin or ""), urlsplit(expected)
+        valid = (source.scheme in {"http", "https"} and not source.username and not source.password
+                 and not source.path and not source.query and not source.fragment
+                 and (source.scheme, source.hostname, source.port or (443 if source.scheme == "https" else 80))
+                 == (target.scheme, target.hostname, target.port or (443 if target.scheme == "https" else 80)))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise AccessDenied(403, "same-origin request required")
+
+
+def protect_cookie_write(request: Request) -> None:
+    if request.method in {"GET", "HEAD", "OPTIONS"} or not auth_enabled() or request_api_token_is_valid(request):
+        return
+    session = request_session(request)
+    if session is not None:
+        require_same_origin(request, required=True)
+        require_csrf(session, request.headers.get("X-CSRF-Token"))
+
+
+def set_session_cookie(response: Response, token: str) -> None:
+    response.set_cookie(SESSION_COOKIE, f"v2.{token}.{_sign(token)}", max_age=session_ttl_seconds(),
+                        httponly=True, secure=_cookie_secure(), samesite="lax", path="/")
 
 
 def clear_session_cookie(response: Response) -> None:
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(SESSION_COOKIE, path="/", httponly=True, secure=_cookie_secure(), samesite="lax")
